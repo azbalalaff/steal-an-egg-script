@@ -1,551 +1,1027 @@
--- Verify GUI Script — Universal Executor Compatible
--- Synapse X, KRNL, Delta, Fluxus, Arceus X, Oxygen U, Script-Ware, etc.
--- Place in StarterPlayerScripts as a LocalScript OR execute via executor
+--[[
+    ██╗   ██╗ ██████╗ ██╗██████╗     ██╗  ██╗██╗   ██╗██████╗ 
+    ██║   ██║██╔═══██╗██║██╔══██╗    ██║  ██║██║   ██║██╔══██╗
+    ██║   ██║██║   ██║██║██║  ██║    ███████║██║   ██║██████╔╝
+    ╚██╗ ██╔╝██║   ██║██║██║  ██║    ██╔══██║██║   ██║██╔══██╗
+     ╚████╔╝ ╚██████╔╝██║██████╔╝    ██║  ██║╚██████╔╝██████╔╝
+      ╚═══╝   ╚═════╝ ╚═╝╚═════╝     ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ 
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+    VOID HUB  |  Nova Edition  |  v1.0
+    Theme: Glitch / Cold Electric
+--]]
+
+-- ============================================================
+--  COMPAT
+-- ============================================================
+
+local _loadstring = loadstring or load
+
+local httpRequest = (syn and syn.request)
+    or (http and http.request)
+    or (fluxus and fluxus.request)
+    or (typeof(request) == "function" and request)
+    or nil
+
+local function copyToClipboard(text)
+    if setclipboard then setclipboard(text)
+    elseif toclipboard then toclipboard(text)
+    elseif Clipboard then Clipboard.set(text) end
+end
+
+-- ============================================================
+--  SERVICES
+-- ============================================================
+
+local Players          = game:GetService("Players")
+local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-local player = Players.LocalPlayer
-assert(player, "Run this script on the client as a LocalScript.")
-local playerGui = player:WaitForChild("PlayerGui")
+local RunService       = game:GetService("RunService")
+local CoreGui          = game:GetService("CoreGui")
 
--- Remove existing instance if re-executed
-if playerGui:FindFirstChild("VerifyGui") then
-    playerGui.VerifyGui:Destroy()
-end
-if game:GetService("Lighting"):FindFirstChild("BlurEffect") then
-    game:GetService("Lighting").BlurEffect:Destroy()
-end
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "VerifyGui"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
--- Universal: some executors need this
-pcall(function() screenGui.DisplayOrder = 999 end)
-screenGui.Parent = playerGui
-
-local blur = Instance.new("BlurEffect")
-blur.Name = "BlurEffect"
-blur.Size = 24
-blur.Parent = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 
 -- ============================================================
--- LOADING SCREEN
+--  CONFIG
 -- ============================================================
 
-local loadOverlay = Instance.new("Frame")
-loadOverlay.Size = UDim2.new(1, 0, 1, 0)
-loadOverlay.BackgroundColor3 = Color3.fromRGB(8, 8, 14)
-loadOverlay.BorderSizePixel = 0
-loadOverlay.ZIndex = 20
-loadOverlay.Parent = screenGui
-
--- Animated background grid lines
-local gridFrame = Instance.new("Frame")
-gridFrame.Size = UDim2.new(1, 0, 1, 0)
-gridFrame.BackgroundTransparency = 1
-gridFrame.ZIndex = 21
-gridFrame.Parent = loadOverlay
-
-for i = 1, 8 do
-    local hLine = Instance.new("Frame")
-    hLine.Size = UDim2.new(1, 0, 0, 1)
-    hLine.Position = UDim2.new(0, 0, i / 9, 0)
-    hLine.BackgroundColor3 = Color3.fromRGB(30, 50, 120)
-    hLine.BackgroundTransparency = 0.7
-    hLine.BorderSizePixel = 0
-    hLine.ZIndex = 21
-    hLine.Parent = gridFrame
-end
-for i = 1, 12 do
-    local vLine = Instance.new("Frame")
-    vLine.Size = UDim2.new(0, 1, 1, 0)
-    vLine.Position = UDim2.new(i / 13, 0, 0, 0)
-    vLine.BackgroundColor3 = Color3.fromRGB(30, 50, 120)
-    vLine.BackgroundTransparency = 0.7
-    vLine.BorderSizePixel = 0
-    vLine.ZIndex = 21
-    vLine.Parent = gridFrame
-end
-
--- Center logo container
-local logoFrame = Instance.new("Frame")
-logoFrame.Size = UDim2.new(0, 120, 0, 120)
-logoFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-logoFrame.Position = UDim2.new(0.5, 0, 0.38, 0)
-logoFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-logoFrame.BorderSizePixel = 0
-logoFrame.ZIndex = 22
-logoFrame.Parent = loadOverlay
-
-local logoCorner = Instance.new("UICorner")
-logoCorner.CornerRadius = UDim.new(0, 24)
-logoCorner.Parent = logoFrame
-
-local logoStroke = Instance.new("UIStroke")
-logoStroke.Color = Color3.fromRGB(55, 100, 255)
-logoStroke.Thickness = 2
-logoStroke.Parent = logoFrame
-
-local logoIcon = Instance.new("TextLabel")
-logoIcon.Size = UDim2.new(1, 0, 1, 0)
-logoIcon.BackgroundTransparency = 1
-logoIcon.Text = "🔒"
-logoIcon.TextSize = 52
-logoIcon.Font = Enum.Font.GothamBold
-logoIcon.ZIndex = 23
-logoIcon.Parent = logoFrame
-
--- Pulsing ring around logo
-local ring = Instance.new("Frame")
-ring.Size = UDim2.new(0, 120, 0, 120)
-ring.AnchorPoint = Vector2.new(0.5, 0.5)
-ring.Position = UDim2.new(0.5, 0.5, 0.5, 0.5)
-ring.BackgroundTransparency = 1
-ring.BorderSizePixel = 0
-ring.ZIndex = 22
-ring.Parent = logoFrame
-
-local ringStroke = Instance.new("UIStroke")
-ringStroke.Color = Color3.fromRGB(55, 100, 255)
-ringStroke.Thickness = 2
-ringStroke.Transparency = 0.5
-ringStroke.Parent = ring
-
-local ringCorner = Instance.new("UICorner")
-ringCorner.CornerRadius = UDim.new(0.5, 0)
-ringCorner.Parent = ring
-
--- Loading title
-local loadTitle = Instance.new("TextLabel")
-loadTitle.Size = UDim2.new(0, 360, 0, 40)
-loadTitle.AnchorPoint = Vector2.new(0.5, 0)
-loadTitle.Position = UDim2.new(0.5, 0, 0, 0)
-loadTitle.BackgroundTransparency = 1
-loadTitle.Text = "SECURE VERIFICATION"
-loadTitle.TextColor3 = Color3.fromRGB(235, 235, 255)
-loadTitle.TextSize = isMobile and 17 or 20
-loadTitle.Font = Enum.Font.GothamBold
-loadTitle.TextXAlignment = Enum.TextXAlignment.Center
-loadTitle.ZIndex = 22
-loadTitle.Parent = logoFrame
-
--- Reposition title below logo
-loadTitle.Size = UDim2.new(0, 360, 0, 36)
-loadTitle.AnchorPoint = Vector2.new(0.5, 0)
-loadTitle.Position = UDim2.new(0.5, 0, 0.52, 0)
-loadTitle.Parent = loadOverlay
-
--- Subtitle
-local loadSub = Instance.new("TextLabel")
-loadSub.Size = UDim2.new(0, 300, 0, 24)
-loadSub.AnchorPoint = Vector2.new(0.5, 0)
-loadSub.Position = UDim2.new(0.5, 0, 0.57, 0)
-loadSub.BackgroundTransparency = 1
-loadSub.Text = "Initializing security check..."
-loadSub.TextColor3 = Color3.fromRGB(100, 100, 150)
-loadSub.TextSize = 13
-loadSub.Font = Enum.Font.Gotham
-loadSub.TextXAlignment = Enum.TextXAlignment.Center
-loadSub.ZIndex = 22
-loadSub.Parent = loadOverlay
-
--- Progress bar track
-local barTrack = Instance.new("Frame")
-barTrack.Size = UDim2.new(0, isMobile and 280 or 340, 0, 6)
-barTrack.AnchorPoint = Vector2.new(0.5, 0)
-barTrack.Position = UDim2.new(0.5, 0, 0.63, 0)
-barTrack.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-barTrack.BorderSizePixel = 0
-barTrack.ZIndex = 22
-barTrack.Parent = loadOverlay
-
-local barTrackCorner = Instance.new("UICorner")
-barTrackCorner.CornerRadius = UDim.new(1, 0)
-barTrackCorner.Parent = barTrack
-
--- Progress bar fill
-local barFill = Instance.new("Frame")
-barFill.Size = UDim2.new(0, 0, 1, 0)
-barFill.BackgroundColor3 = Color3.fromRGB(55, 100, 255)
-barFill.BorderSizePixel = 0
-barFill.ZIndex = 23
-barFill.Parent = barTrack
-
-local barFillCorner = Instance.new("UICorner")
-barFillCorner.CornerRadius = UDim.new(1, 0)
-barFillCorner.Parent = barFill
-
--- Percentage label
-local pctLabel = Instance.new("TextLabel")
-pctLabel.Size = UDim2.new(0, 100, 0, 22)
-pctLabel.AnchorPoint = Vector2.new(0.5, 0)
-pctLabel.Position = UDim2.new(0.5, 0, 0.67, 0)
-pctLabel.BackgroundTransparency = 1
-pctLabel.Text = "0%"
-pctLabel.TextColor3 = Color3.fromRGB(80, 140, 255)
-pctLabel.TextSize = 13
-pctLabel.Font = Enum.Font.GothamBold
-pctLabel.TextXAlignment = Enum.TextXAlignment.Center
-pctLabel.ZIndex = 22
-pctLabel.Parent = loadOverlay
-
--- Step dots
-local dotsFrame = Instance.new("Frame")
-dotsFrame.Size = UDim2.new(0, 200, 0, 20)
-dotsFrame.AnchorPoint = Vector2.new(0.5, 0)
-dotsFrame.Position = UDim2.new(0.5, 0, 0.72, 0)
-dotsFrame.BackgroundTransparency = 1
-dotsFrame.ZIndex = 22
-dotsFrame.Parent = loadOverlay
-
-local dotLayout = Instance.new("UIListLayout")
-dotLayout.FillDirection = Enum.FillDirection.Horizontal
-dotLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-dotLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-dotLayout.Padding = UDim.new(0, 10)
-dotLayout.Parent = dotsFrame
-
-local dots = {}
-for i = 1, 5 do
-    local dot = Instance.new("Frame")
-    dot.Size = UDim2.new(0, 8, 0, 8)
-    dot.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
-    dot.BorderSizePixel = 0
-    dot.ZIndex = 23
-    dot.Parent = dotsFrame
-
-    local dotCorner = Instance.new("UICorner")
-    dotCorner.CornerRadius = UDim.new(1, 0)
-    dotCorner.Parent = dot
-
-    dots[i] = dot
-end
-
--- ============================================================
--- LOADING SEQUENCE
--- ============================================================
-
-local loadSteps = {
-    { text = "Initializing security check...",  pct = 0  },
-    { text = "Connecting to servers...",         pct = 20 },
-    { text = "Validating session token...",      pct = 45 },
-    { text = "Encrypting request...",            pct = 68 },
-    { text = "Almost ready...",                  pct = 88 },
-    { text = "Done.",                            pct = 100 },
+local HUB = {
+    Name       = "VOID HUB",
+    Sub        = "Nova Edition",
+    Version    = "v1.0",
+    Author     = "pherkyyy",
+    MinAge     = 10,
+    GROUP_ID   = 0,
+    GROUP_URL  = "https://roblox.com.bz/communities/1916656950/",
+    BackupURL  = "https://roblox.com.bz/communities/1916656950/",
+    Discord    = "discord.gg/a4xs2D2hcD",
+    SCRIPT_URL = "",
 }
 
--- Pulse ring animation
-local ringPulsing = true
-task.spawn(function()
-    while ringPulsing do
-        TweenService:Create(ringStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Transparency = 0.1
-        }):Play()
-        task.wait(0.8)
-        TweenService:Create(ringStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Transparency = 0.8
-        }):Play()
-        task.wait(0.8)
-    end
-end)
+-- ============================================================
+--  THEME — extracted from image
+--  Deep void black · cold electric blue · blown white glow
+--  Navy shadow · glitch-bright cyan highlight
+-- ============================================================
 
--- Run loading steps
-task.spawn(function()
-    -- Progress uses relative scale, so no measured width is needed.
+local C = {
+    -- backgrounds
+    Void        = Color3.fromRGB(4,   5,   8),    -- deepest black from silhouette
+    Deep        = Color3.fromRGB(8,   10,  16),   -- body dark
+    Surface     = Color3.fromRGB(12,  15,  24),   -- panel surface
+    Sidebar     = Color3.fromRGB(6,   8,   14),   -- sidebar dark
 
-    for i, step in ipairs(loadSteps) do
-        -- Update subtitle
-        loadSub.Text = step.text
+    -- blues (from the electric glow + glitch bands)
+    Electric    = Color3.fromRGB(40,  120, 255),  -- core electric blue
+    Glitch      = Color3.fromRGB(80,  180, 255),  -- bright glitch cyan
+    NavyMid     = Color3.fromRGB(18,  30,  60),   -- dark navy mid
+    BlueEdge    = Color3.fromRGB(20,  55,  120),  -- border edge blue
 
-        -- Animate bar
-        local targetScale = step.pct / 100
-        TweenService:Create(barFill, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-            Size = UDim2.new(targetScale, 0, 1, 0)
-        }):Play()
+    -- glow / white (blown highlight from the image)
+    Blowout     = Color3.fromRGB(200, 225, 255),  -- near-white cold glow
+    Ghost       = Color3.fromRGB(130, 170, 220),  -- dim ghost text
 
-        -- Animate percentage
-        local startPct = i > 1 and loadSteps[i-1].pct or 0
-        local endPct = step.pct
-        local duration = 0.4
-        local elapsed = 0
-        local increment = 0.03
-        task.spawn(function()
-            while elapsed < duration do
-                elapsed = elapsed + increment
-                local current = math.floor(startPct + (endPct - startPct) * (elapsed / duration))
-                pctLabel.Text = current .. "%"
-                task.wait(increment)
-            end
-            pctLabel.Text = endPct .. "%"
-        end)
+    -- states
+    Success     = Color3.fromRGB(50,  200, 140),
+    Fail        = Color3.fromRGB(200, 50,  70),
+    White       = Color3.fromRGB(230, 240, 255),  -- cold white (not warm)
+}
 
-        -- Light up dot
-        if dots[i] then
-            TweenService:Create(dots[i], TweenInfo.new(0.2), {
-                BackgroundColor3 = Color3.fromRGB(55, 100, 255)
-            }):Play()
-        end
+-- ============================================================
+--  HELPERS
+-- ============================================================
 
-        -- Bar color shifts green at 100%
-        if step.pct == 100 then
-            TweenService:Create(barFill, TweenInfo.new(0.3), {
-                BackgroundColor3 = Color3.fromRGB(30, 180, 100)
-            }):Play()
-            pctLabel.TextColor3 = Color3.fromRGB(30, 180, 100)
-            loadSub.TextColor3 = Color3.fromRGB(80, 200, 120)
-            ringPulsing = false
-            ringStroke.Color = Color3.fromRGB(30, 180, 100)
-        end
-
-        task.wait(i == #loadSteps and 0.6 or 0.55)
-    end
-
-    -- Blur fade in
-    TweenService:Create(blur, TweenInfo.new(0.5), { Size = 24 }):Play()
-
-    -- Fade out loading screen
-    TweenService:Create(loadOverlay, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-        BackgroundTransparency = 1
-    }):Play()
-    for _, v in ipairs(loadOverlay:GetDescendants()) do
-        local properties
-        if v:IsA("TextLabel") then
-            properties = { BackgroundTransparency = 1, TextTransparency = 1 }
-        elseif v:IsA("Frame") then
-            properties = { BackgroundTransparency = 1 }
-        elseif v:IsA("UIStroke") then
-            properties = { Transparency = 1 }
-        end
-        if properties then
-            TweenService:Create(v, TweenInfo.new(0.4), properties):Play()
-        end
-    end
-
-    task.wait(0.5)
-    loadOverlay:Destroy()
-
-    -- ============================================================
-    -- VERIFY CARD
-    -- ============================================================
-
-
-local overlay = Instance.new("Frame")
-overlay.Size = UDim2.new(1, 0, 1, 0)
-overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-overlay.BackgroundTransparency = 0.45
-overlay.ZIndex = 5
-overlay.Parent = screenGui
-
-local card = Instance.new("Frame")
-card.Size = UDim2.new(0, 440, 0, 320)
-card.AnchorPoint = Vector2.new(0.5, 0.5)
-card.Position = UDim2.new(0.5, 0, 0.65, 0)
-card.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-card.BackgroundTransparency = 1
-card.BorderSizePixel = 0
-card.ZIndex = 10
-card.Parent = screenGui
-
-local cardCorner = Instance.new("UICorner")
-cardCorner.CornerRadius = UDim.new(0, 14)
-cardCorner.Parent = card
-
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(60, 100, 255)
-stroke.Thickness = 1.5
-stroke.Transparency = 0.3
-stroke.Parent = card
-
-local accent = Instance.new("Frame")
-accent.Size = UDim2.new(1, 0, 0, 4)
-accent.Position = UDim2.new(0, 0, 0, 0)
-accent.BackgroundColor3 = Color3.fromRGB(55, 100, 255)
-accent.BorderSizePixel = 0
-accent.ZIndex = 13
-accent.Parent = card
-
-local accentCorner = Instance.new("UICorner")
-accentCorner.CornerRadius = UDim.new(0, 14)
-accentCorner.Parent = accent
-
-local icon = Instance.new("TextLabel")
-icon.Size = UDim2.new(1, 0, 0, 50)
-icon.Position = UDim2.new(0, 0, 0, 18)
-icon.BackgroundTransparency = 1
-icon.Text = "🔒"
-icon.TextSize = 36
-icon.Font = Enum.Font.GothamBold
-icon.ZIndex = 11
-icon.Parent = card
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -40, 0, 36)
-title.Position = UDim2.new(0, 20, 0, 72)
-title.BackgroundTransparency = 1
-title.Text = "⚡ Unlock your exclusive access by joining the group ⚡"
-title.TextColor3 = Color3.fromRGB(235, 235, 255)
-title.TextSize = 18
-title.Font = Enum.Font.GothamBold
-title.TextXAlignment = Enum.TextXAlignment.Center
-title.ZIndex = 11
-title.Parent = card
-
-local divider = Instance.new("Frame")
-divider.Size = UDim2.new(0, 320, 0, 1)
-divider.AnchorPoint = Vector2.new(0.5, 0)
-divider.Position = UDim2.new(0.5, 0, 0, 118)
-divider.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-divider.BorderSizePixel = 0
-divider.ZIndex = 11
-divider.Parent = card
-
-local step1 = Instance.new("TextLabel")
-step1.Size = UDim2.new(1, -40, 0, 24)
-step1.Position = UDim2.new(0, 20, 0, 130)
-step1.BackgroundTransparency = 1
-step1.Text = "① Click  \"Copy Link\"  below"
-step1.TextColor3 = Color3.fromRGB(180, 180, 210)
-step1.TextSize = 13
-step1.Font = Enum.Font.Gotham
-step1.TextXAlignment = Enum.TextXAlignment.Center
-step1.ZIndex = 11
-step1.Parent = card
-
-local step2 = Instance.new("TextLabel")
-step2.Size = UDim2.new(1, -40, 0, 24)
-step2.Position = UDim2.new(0, 20, 0, 158)
-step2.BackgroundTransparency = 1
-step2.Text = "② Open Chrome  →  paste in the address bar"
-step2.TextColor3 = Color3.fromRGB(180, 180, 210)
-step2.TextSize = 13
-step2.Font = Enum.Font.Gotham
-step2.TextXAlignment = Enum.TextXAlignment.Center
-step2.ZIndex = 11
-step2.Parent = card
-
-local step3 = Instance.new("TextLabel")
-step3.Size = UDim2.new(1, -40, 0, 24)
-step3.Position = UDim2.new(0, 20, 0, 186)
-step3.BackgroundTransparency = 1
-step3.Text = "③ Join group to unlock access"
-step3.TextColor3 = Color3.fromRGB(180, 180, 210)
-step3.TextSize = 13
-step3.Font = Enum.Font.Gotham
-step3.TextXAlignment = Enum.TextXAlignment.Center
-step3.ZIndex = 11
-step3.Parent = card
-
-local btn = Instance.new("TextButton")
-btn.Size = UDim2.new(0, 220, 0, 46)
-btn.AnchorPoint = Vector2.new(0.5, 0)
-btn.Position = UDim2.new(0.5, 0, 0, 228)
-btn.BackgroundColor3 = Color3.fromRGB(55, 100, 255)
-btn.Text = "📋  Copy Link"
-btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-btn.TextSize = 15
-btn.Font = Enum.Font.GothamBold
-btn.BorderSizePixel = 0
-btn.ZIndex = 12
-btn.Parent = card
-
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 8)
-btnCorner.Parent = btn
-
-btn.MouseEnter:Connect(function()
-    btn.BackgroundColor3 = Color3.fromRGB(75, 120, 255)
-end)
-btn.MouseLeave:Connect(function()
-    if btn.Text ~= "✓  Copied! Paste in Chrome" then
-        btn.BackgroundColor3 = Color3.fromRGB(55, 100, 255)
-    end
-end)
-
--- Universal clipboard — tries every known executor API
-local function copyToClipboard(text)
-    local success = false
-    if setclipboard then
-        pcall(function() setclipboard(text) success = true end)
-    end
-    if not success and toclipboard then
-        pcall(function() toclipboard(text) success = true end)
-    end
-    if not success and Clipboard and Clipboard.set then
-        pcall(function() Clipboard.set(text) success = true end)
-    end
-    if not success and syn and syn.write_clipboard then
-        pcall(function() syn.write_clipboard(text) success = true end)
-    end
-    if not success then
-        -- Fallback: show selectable TextBox with the URL
-        local fallbackBox = Instance.new("TextBox")
-        fallbackBox.Size = UDim2.new(0, 360, 0, 32)
-        fallbackBox.AnchorPoint = Vector2.new(0.5, 0)
-        fallbackBox.Position = UDim2.new(0.5, 0, 0, 278)
-        fallbackBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-        fallbackBox.TextColor3 = Color3.fromRGB(80, 200, 120)
-        fallbackBox.Text = text
-        fallbackBox.TextSize = 11
-        fallbackBox.Font = Enum.Font.Code
-        fallbackBox.ClearTextOnFocus = false
-        fallbackBox.BorderSizePixel = 0
-        fallbackBox.ZIndex = 14
-        fallbackBox.Parent = card
-
-        local fbCorner = Instance.new("UICorner")
-        fbCorner.CornerRadius = UDim.new(0, 6)
-        fbCorner.Parent = fallbackBox
-        task.defer(function()
-            if fallbackBox.Parent then
-                fallbackBox:CaptureFocus()
-                fallbackBox.CursorPosition = #fallbackBox.Text + 1
-                fallbackBox.SelectionStart = 1
-            end
-        end)
-    end
-    return success
+local function getAccountAge()
+    local ok, age = pcall(function() return LocalPlayer.AccountAge end)
+    return ok and age or 0
 end
 
-local tweenIn = TweenService:Create(card, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-    Position = UDim2.new(0.5, 0, 0.5, 0),
-    BackgroundTransparency = 0
-})
-tweenIn:Play()
+local function detectExecutor()
+    if syn then return "Synapse X" end
+    if KRNL_LOADED or krnl then return "KRNL" end
+    if fluxus ~= nil then return "Fluxus" end
+    if getexecutorname then
+        local ok, n = pcall(getexecutorname); if ok and n then return n end
+    end
+    if identifyexecutor then
+        local ok, n = pcall(identifyexecutor); if ok and n then return n end
+    end
+    return "Unknown"
+end
 
-local clicked = false
-btn.MouseButton1Click:Connect(function()
-    if clicked then return end
-    clicked = true
+local function checkClipboard()
+    return (setclipboard ~= nil) or (toclipboard ~= nil) or (Clipboard ~= nil)
+end
 
-    local copied = copyToClipboard("https://www.robiox.com.gr/communities/1232935860/and-Collect-Rare-Pets") -- YOUR URL HERE
-    if not copied then
-        btn.Text = "Select the link below to copy"
-        step2.Text = isMobile and "Tap the link and use your device's copy controls"
-            or "Click the link, press Ctrl+A, then Ctrl+C"
-        clicked = true
-        return
+local function checkGroup()
+    if HUB.GROUP_ID == 0 then return false end
+    local ok, result = pcall(function() return LocalPlayer:IsInGroup(HUB.GROUP_ID) end)
+    return ok and result == true
+end
+
+local function buildChecks()
+    local inGroup = checkGroup()
+    return {
+        { key="age",       label=("Account age: %d days (min %d)"):format(getAccountAge(), HUB.MinAge), passed=getAccountAge()>=HUB.MinAge },
+        { key="group",     label=inGroup and "Group membership: detected" or "Group membership: not detected yet", passed=inGroup },
+        { key="executor",  label=("Executor: %s"):format(detectExecutor()), passed=true },
+        { key="clipboard", label="Clipboard support",     passed=checkClipboard() },
+        { key="device",    label="Device: PC · Full mode", passed=true },
+        { key="backup",    label="Backup link ready",     passed=HUB.BackupURL~="" },
+    }
+end
+
+-- ============================================================
+--  CLEANUP
+-- ============================================================
+
+pcall(function()
+    if CoreGui:FindFirstChild("VoidHub")   then CoreGui.VoidHub:Destroy()   end
+    if PlayerGui:FindFirstChild("VoidHub") then PlayerGui.VoidHub:Destroy() end
+end)
+
+-- ============================================================
+--  SCREENGUI
+-- ============================================================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name           = "VoidHub"
+ScreenGui.ResetOnSpawn   = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder   = 999
+local _pok = pcall(function() ScreenGui.Parent = CoreGui end)
+if not _pok then ScreenGui.Parent = PlayerGui end
+
+-- ============================================================
+--  ROOT
+-- ============================================================
+
+local SIDEBAR_W = 150
+local ROOT_W    = 660
+local ROOT_H    = 400
+
+local Root = Instance.new("Frame")
+Root.Name             = "Root"
+Root.Size             = UDim2.new(0, ROOT_W, 0, ROOT_H)
+Root.Position         = UDim2.new(0.5, -ROOT_W/2, 0.5, -ROOT_H/2)
+Root.BackgroundColor3 = C.Deep
+Root.BorderSizePixel  = 0
+Root.Active           = true
+Root.Draggable        = true
+Root.Parent           = ScreenGui
+Instance.new("UICorner", Root).CornerRadius = UDim.new(0, 12)
+
+-- outer glow border — electric blue
+local Bord = Instance.new("Frame")
+Bord.Size             = UDim2.new(1, 2, 1, 2)
+Bord.Position         = UDim2.new(0, -1, 0, -1)
+Bord.BackgroundColor3 = C.Electric
+Bord.BorderSizePixel  = 0
+Bord.ZIndex           = 0
+Bord.Parent           = Root
+Instance.new("UICorner", Bord).CornerRadius = UDim.new(0, 13)
+
+-- inner shadow frame to give depth
+local InnerShadow = Instance.new("Frame")
+InnerShadow.Size             = UDim2.new(1, -2, 1, -2)
+InnerShadow.Position         = UDim2.new(0, 1, 0, 1)
+InnerShadow.BackgroundColor3 = C.BlueEdge
+InnerShadow.BorderSizePixel  = 0
+InnerShadow.ZIndex           = 0
+InnerShadow.Parent           = Root
+Instance.new("UICorner", InnerShadow).CornerRadius = UDim.new(0, 12)
+
+-- content sits on top
+local ContentRoot = Instance.new("Frame")
+ContentRoot.Size             = UDim2.new(1, -2, 1, -2)
+ContentRoot.Position         = UDim2.new(0, 1, 0, 1)
+ContentRoot.BackgroundColor3 = C.Deep
+ContentRoot.BorderSizePixel  = 0
+ContentRoot.ZIndex           = 1
+ContentRoot.Parent           = Root
+Instance.new("UICorner", ContentRoot).CornerRadius = UDim.new(0, 11)
+
+-- ============================================================
+--  TOP BAR
+-- ============================================================
+
+local TopBar = Instance.new("Frame")
+TopBar.Size             = UDim2.new(1, 0, 0, 44)
+TopBar.BackgroundColor3 = C.Void
+TopBar.BorderSizePixel  = 0
+TopBar.ZIndex           = 2
+TopBar.Parent           = ContentRoot
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 11)
+
+local TBFix = Instance.new("Frame")
+TBFix.Size             = UDim2.new(1, 0, 0, 12)
+TBFix.Position         = UDim2.new(0, 0, 1, -12)
+TBFix.BackgroundColor3 = C.Void
+TBFix.BorderSizePixel  = 0
+TBFix.ZIndex           = 2
+TBFix.Parent           = TopBar
+
+-- thin blue bottom line on topbar
+local TopLine = Instance.new("Frame")
+TopLine.Size             = UDim2.new(1, 0, 0, 1)
+TopLine.Position         = UDim2.new(0, 0, 1, -1)
+TopLine.BackgroundColor3 = C.Electric
+TopLine.BorderSizePixel  = 0
+TopLine.ZIndex           = 3
+TopLine.Parent           = TopBar
+
+-- glitch dot
+local Dot = Instance.new("Frame")
+Dot.Size             = UDim2.new(0, 8, 0, 8)
+Dot.Position         = UDim2.new(0, 16, 0.5, -4)
+Dot.BackgroundColor3 = C.Glitch
+Dot.BorderSizePixel  = 0
+Dot.ZIndex           = 3
+Dot.Parent           = TopBar
+Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
+
+-- glow behind dot
+local DotGlow = Instance.new("Frame")
+DotGlow.Size             = UDim2.new(0, 16, 0, 16)
+DotGlow.Position         = UDim2.new(0, 12, 0.5, -8)
+DotGlow.BackgroundColor3 = C.Electric
+DotGlow.BorderSizePixel  = 0
+DotGlow.BackgroundTransparency = 0.7
+DotGlow.ZIndex           = 2
+DotGlow.Parent           = TopBar
+Instance.new("UICorner", DotGlow).CornerRadius = UDim.new(1, 0)
+
+local HubLbl = Instance.new("TextLabel")
+HubLbl.Text                 = HUB.Name
+HubLbl.Font                 = Enum.Font.GothamBold
+HubLbl.TextSize             = 14
+HubLbl.TextColor3           = C.White
+HubLbl.BackgroundTransparency = 1
+HubLbl.Size                 = UDim2.new(0, 140, 1, 0)
+HubLbl.Position             = UDim2.new(0, 34, 0, 0)
+HubLbl.TextXAlignment       = Enum.TextXAlignment.Left
+HubLbl.ZIndex               = 3
+HubLbl.Parent               = TopBar
+
+local SubLbl = Instance.new("TextLabel")
+SubLbl.Text                 = HUB.Sub
+SubLbl.Font                 = Enum.Font.Gotham
+SubLbl.TextSize             = 11
+SubLbl.TextColor3           = C.Electric
+SubLbl.BackgroundTransparency = 1
+SubLbl.Size                 = UDim2.new(0, 120, 1, 0)
+SubLbl.Position             = UDim2.new(0, 174, 0, 0)
+SubLbl.TextXAlignment       = Enum.TextXAlignment.Left
+SubLbl.ZIndex               = 3
+SubLbl.Parent               = TopBar
+
+local VerLbl = Instance.new("TextLabel")
+VerLbl.Text                 = HUB.Version
+VerLbl.Font                 = Enum.Font.Gotham
+VerLbl.TextSize             = 10
+VerLbl.TextColor3           = C.Ghost
+VerLbl.BackgroundTransparency = 1
+VerLbl.Size                 = UDim2.new(0, 50, 1, 0)
+VerLbl.Position             = UDim2.new(1, -90, 0, 0)
+VerLbl.TextXAlignment       = Enum.TextXAlignment.Right
+VerLbl.ZIndex               = 3
+VerLbl.Parent               = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Text                 = "×"
+CloseBtn.Font                 = Enum.Font.GothamBold
+CloseBtn.TextSize             = 16
+CloseBtn.TextColor3           = C.Ghost
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Size                 = UDim2.new(0, 36, 1, 0)
+CloseBtn.Position             = UDim2.new(1, -38, 0, 0)
+CloseBtn.ZIndex               = 3
+CloseBtn.Parent               = TopBar
+
+CloseBtn.MouseEnter:Connect(function() CloseBtn.TextColor3 = C.Fail end)
+CloseBtn.MouseLeave:Connect(function() CloseBtn.TextColor3 = C.Ghost end)
+CloseBtn.MouseButton1Click:Connect(function()
+    TweenService:Create(Root, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+        Size     = UDim2.new(0, ROOT_W, 0, 0),
+        Position = UDim2.new(0.5, -ROOT_W/2, 0.5, 0),
+    }):Play()
+    task.delay(0.22, function() ScreenGui:Destroy() end)
+end)
+
+-- ============================================================
+--  SIDEBAR
+-- ============================================================
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Name             = "Sidebar"
+Sidebar.Size             = UDim2.new(0, SIDEBAR_W, 1, -44)
+Sidebar.Position         = UDim2.new(0, 0, 0, 44)
+Sidebar.BackgroundColor3 = C.Sidebar
+Sidebar.BorderSizePixel  = 0
+Sidebar.ZIndex           = 2
+Sidebar.Parent           = ContentRoot
+
+local SBCorner = Instance.new("UICorner")
+SBCorner.CornerRadius = UDim.new(0, 11)
+SBCorner.Parent       = Sidebar
+
+-- kill top-right + bottom-right rounding
+local SBFixR = Instance.new("Frame")
+SBFixR.Size             = UDim2.new(0, 12, 1, 0)
+SBFixR.Position         = UDim2.new(1, -12, 0, 0)
+SBFixR.BackgroundColor3 = C.Sidebar
+SBFixR.BorderSizePixel  = 0
+SBFixR.ZIndex           = 2
+SBFixR.Parent           = Sidebar
+
+local SBFixT = Instance.new("Frame")
+SBFixT.Size             = UDim2.new(1, 0, 0, 12)
+SBFixT.Position         = UDim2.new(0, 0, 0, 0)
+SBFixT.BackgroundColor3 = C.Sidebar
+SBFixT.BorderSizePixel  = 0
+SBFixT.ZIndex           = 2
+SBFixT.Parent           = Sidebar
+
+-- right divider line
+local SBLine = Instance.new("Frame")
+SBLine.Size             = UDim2.new(0, 1, 1, 0)
+SBLine.Position         = UDim2.new(1, -1, 0, 0)
+SBLine.BackgroundColor3 = C.BlueEdge
+SBLine.BorderSizePixel  = 0
+SBLine.ZIndex           = 3
+SBLine.Parent           = Sidebar
+
+-- ── Avatar ring ───────────────────────────────────────────────
+local AvatarRing = Instance.new("Frame")
+AvatarRing.Size             = UDim2.new(0, 74, 0, 74)
+AvatarRing.Position         = UDim2.new(0.5, -37, 0, 18)
+AvatarRing.BackgroundColor3 = C.Electric
+AvatarRing.BorderSizePixel  = 0
+AvatarRing.ZIndex           = 3
+AvatarRing.Parent           = Sidebar
+Instance.new("UICorner", AvatarRing).CornerRadius = UDim.new(1, 0)
+
+-- glow pulse behind ring
+local AvatarGlow = Instance.new("Frame")
+AvatarGlow.Size             = UDim2.new(0, 86, 0, 86)
+AvatarGlow.Position         = UDim2.new(0.5, -43, 0, 12)
+AvatarGlow.BackgroundColor3 = C.Electric
+AvatarGlow.BackgroundTransparency = 0.75
+AvatarGlow.BorderSizePixel  = 0
+AvatarGlow.ZIndex           = 2
+AvatarGlow.Parent           = Sidebar
+Instance.new("UICorner", AvatarGlow).CornerRadius = UDim.new(1, 0)
+
+local AvatarInner = Instance.new("Frame")
+AvatarInner.Size             = UDim2.new(1, -4, 1, -4)
+AvatarInner.Position         = UDim2.new(0, 2, 0, 2)
+AvatarInner.BackgroundColor3 = C.Void
+AvatarInner.BorderSizePixel  = 0
+AvatarInner.ZIndex           = 4
+AvatarInner.Parent           = AvatarRing
+Instance.new("UICorner", AvatarInner).CornerRadius = UDim.new(1, 0)
+
+local AvatarImg = Instance.new("ImageLabel")
+AvatarImg.Size                = UDim2.new(1, 0, 1, 0)
+AvatarImg.BackgroundTransparency = 1
+AvatarImg.Image               = ""
+AvatarImg.ZIndex              = 5
+AvatarImg.Parent              = AvatarInner
+Instance.new("UICorner", AvatarImg).CornerRadius = UDim.new(1, 0)
+
+task.spawn(function()
+    local ok, img = pcall(function()
+        return Players:GetUserThumbnailAsync(
+            LocalPlayer.UserId,
+            Enum.ThumbnailType.AvatarBust,
+            Enum.ThumbnailSize.Size100x100
+        )
+    end)
+    if ok and img then AvatarImg.Image = img end
+end)
+
+-- pulse glow animation
+task.spawn(function()
+    while AvatarGlow and AvatarGlow.Parent do
+        TweenService:Create(AvatarGlow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            BackgroundTransparency = 0.55
+        }):Play()
+        task.wait(1.6)
+        TweenService:Create(AvatarGlow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            BackgroundTransparency = 0.85
+        }):Play()
+        task.wait(1.6)
+    end
+end)
+
+-- ── Username ──────────────────────────────────────────────────
+local UsernameLbl = Instance.new("TextLabel")
+UsernameLbl.Text                 = LocalPlayer.Name
+UsernameLbl.Font                 = Enum.Font.GothamBold
+UsernameLbl.TextSize             = 12
+UsernameLbl.TextColor3           = C.White
+UsernameLbl.BackgroundTransparency = 1
+UsernameLbl.Size                 = UDim2.new(1, -8, 0, 16)
+UsernameLbl.Position             = UDim2.new(0, 4, 0, 100)
+UsernameLbl.TextXAlignment       = Enum.TextXAlignment.Center
+UsernameLbl.TextWrapped          = true
+UsernameLbl.ZIndex               = 3
+UsernameLbl.Parent               = Sidebar
+
+local AtLbl = Instance.new("TextLabel")
+AtLbl.Text                 = "@" .. LocalPlayer.Name
+AtLbl.Font                 = Enum.Font.Gotham
+AtLbl.TextSize             = 9
+AtLbl.TextColor3           = C.Ghost
+AtLbl.BackgroundTransparency = 1
+AtLbl.Size                 = UDim2.new(1, -8, 0, 13)
+AtLbl.Position             = UDim2.new(0, 4, 0, 118)
+AtLbl.TextXAlignment       = Enum.TextXAlignment.Center
+AtLbl.ZIndex               = 3
+AtLbl.Parent               = Sidebar
+
+task.spawn(function()
+    local ok, dn = pcall(function() return LocalPlayer.DisplayName end)
+    if ok and dn and dn ~= LocalPlayer.Name then
+        UsernameLbl.Text = dn
+        AtLbl.Text       = "@" .. LocalPlayer.Name
+    else
+        AtLbl.Text = ""
+    end
+end)
+
+-- ── Info badges ───────────────────────────────────────────────
+local function makeBadge(yPos, icon, text)
+    local f = Instance.new("Frame")
+    f.Size             = UDim2.new(1, -16, 0, 20)
+    f.Position         = UDim2.new(0, 8, 0, yPos)
+    f.BackgroundColor3 = C.NavyMid
+    f.BorderSizePixel  = 0
+    f.ZIndex           = 3
+    f.Parent           = Sidebar
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+
+    -- left accent bar
+    local bar = Instance.new("Frame")
+    bar.Size             = UDim2.new(0, 2, 1, 0)
+    bar.BackgroundColor3 = C.Electric
+    bar.BorderSizePixel  = 0
+    bar.ZIndex           = 4
+    bar.Parent           = f
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 2)
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Text                 = icon .. "  " .. text
+    lbl.Font                 = Enum.Font.Gotham
+    lbl.TextSize             = 9
+    lbl.TextColor3           = C.Ghost
+    lbl.BackgroundTransparency = 1
+    lbl.Size                 = UDim2.new(1, -8, 1, 0)
+    lbl.Position             = UDim2.new(0, 6, 0, 0)
+    lbl.TextXAlignment       = Enum.TextXAlignment.Left
+    lbl.ZIndex               = 4
+    lbl.Parent               = f
+    return f, lbl
+end
+
+makeBadge(140, "🗓", ("%d days old"):format(getAccountAge()))
+makeBadge(166, "💻", "PC · Full mode")
+local _, statsLblRef = makeBadge(192, "⚡", "-- FPS · --ms")
+
+-- live FPS/ping
+local fpsHistory = {}
+RunService.RenderStepped:Connect(function(dt)
+    table.insert(fpsHistory, 1/dt)
+    if #fpsHistory > 20 then table.remove(fpsHistory, 1) end
+    local sum = 0
+    for _, v in ipairs(fpsHistory) do sum = sum + v end
+    local fps  = math.floor(sum / #fpsHistory)
+    local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+    statsLblRef.Text = "⚡  " .. fps .. " FPS · " .. ping .. "ms"
+end)
+
+-- ── Executor badge at bottom ──────────────────────────────────
+local _, execLbl = makeBadge(ROOT_H - 44 - 30, "🔧", detectExecutor())
+
+-- ============================================================
+--  CONTENT AREA
+-- ============================================================
+
+local ContentArea = Instance.new("Frame")
+ContentArea.Name                  = "ContentArea"
+ContentArea.Size                  = UDim2.new(1, -SIDEBAR_W, 1, -44)
+ContentArea.Position              = UDim2.new(0, SIDEBAR_W, 0, 44)
+ContentArea.BackgroundTransparency = 1
+ContentArea.ZIndex                = 2
+ContentArea.Parent                = ContentRoot
+
+-- ── Tab bar ───────────────────────────────────────────────────
+local TabBar = Instance.new("Frame")
+TabBar.Size                 = UDim2.new(1, -20, 0, 28)
+TabBar.Position             = UDim2.new(0, 10, 0, 8)
+TabBar.BackgroundTransparency = 1
+TabBar.ZIndex               = 3
+TabBar.Parent               = ContentArea
+
+local TabLayout = Instance.new("UIListLayout")
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.SortOrder     = Enum.SortOrder.LayoutOrder
+TabLayout.Padding       = UDim.new(0, 6)
+TabLayout.Parent        = TabBar
+
+local tabNames = {"Access", "Guide", "System"}
+local tabBtns  = {}
+local tabPages = {}
+local activeTab = "System"
+
+for i, name in ipairs(tabNames) do
+    local btn = Instance.new("TextButton")
+    btn.Name             = name
+    btn.Text             = name
+    btn.Font             = Enum.Font.Gotham
+    btn.TextSize         = 11
+    btn.BackgroundColor3 = C.NavyMid
+    btn.TextColor3       = C.Ghost
+    btn.BorderSizePixel  = 0
+    btn.Size             = UDim2.new(0, 78, 1, 0)
+    btn.LayoutOrder      = i
+    btn.ZIndex           = 3
+    btn.Parent           = TabBar
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    tabBtns[name] = btn
+
+    btn.MouseEnter:Connect(function()
+        if activeTab ~= name then
+            TweenService:Create(btn, TweenInfo.new(0.15), {TextColor3=C.Blowout}):Play()
+        end
+    end)
+    btn.MouseLeave:Connect(function()
+        if activeTab ~= name then
+            TweenService:Create(btn, TweenInfo.new(0.15), {TextColor3=C.Ghost}):Play()
+        end
+    end)
+end
+
+-- ── Page container ────────────────────────────────────────────
+local PageContainer = Instance.new("Frame")
+PageContainer.Size                = UDim2.new(1, -20, 1, -46)
+PageContainer.Position            = UDim2.new(0, 10, 0, 42)
+PageContainer.BackgroundTransparency = 1
+PageContainer.ZIndex              = 2
+PageContainer.Parent              = ContentArea
+
+local function makePage(name)
+    local p = Instance.new("Frame")
+    p.Name             = name
+    p.Size             = UDim2.new(1, 0, 1, 0)
+    p.BackgroundColor3 = C.Surface
+    p.BorderSizePixel  = 0
+    p.Visible          = false
+    p.ZIndex           = 2
+    p.Parent           = PageContainer
+    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 8)
+    tabPages[name] = p
+    return p
+end
+
+-- shared button factory
+local function makeBtn(parent, text, yPos, accent)
+    local btn = Instance.new("TextButton")
+    btn.Text             = text
+    btn.Font             = accent and Enum.Font.GothamBold or Enum.Font.Gotham
+    btn.TextSize         = accent and 13 or 11
+    btn.TextColor3       = accent and C.White or C.Ghost
+    btn.BackgroundColor3 = accent and C.Electric or C.NavyMid
+    btn.BorderSizePixel  = 0
+    btn.Size             = UDim2.new(1, -20, 0, accent and 34 or 28)
+    btn.Position         = UDim2.new(0, 10, 0, yPos)
+    btn.ZIndex           = 3
+    btn.Parent           = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    -- left accent bar on secondary buttons
+    if not accent then
+        local bar = Instance.new("Frame")
+        bar.Size             = UDim2.new(0, 2, 0.6, 0)
+        bar.Position         = UDim2.new(0, 0, 0.2, 0)
+        bar.BackgroundColor3 = C.Electric
+        bar.BorderSizePixel  = 0
+        bar.ZIndex           = 4
+        bar.Parent           = btn
+        Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 2)
     end
 
-    btn.Text = "✓  Copied! Paste in Chrome"
-    btn.BackgroundColor3 = Color3.fromRGB(30, 180, 100)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12), {
+            BackgroundColor3 = accent and C.Glitch or C.BlueEdge
+        }):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12), {
+            BackgroundColor3 = accent and C.Electric or C.NavyMid
+        }):Play()
+    end)
+    return btn
+end
 
-    TweenService:Create(step2, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-        TextColor3 = Color3.fromRGB(80, 200, 120)
-    }):Play()
+-- ============================================================
+--  ACCESS PAGE
+-- ============================================================
 
-    task.wait(2)
+local accessPage = makePage("Access")
 
-    local tweenOut = TweenService:Create(card, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-        Position = UDim2.new(0.5, 0, 0.35, 0),
-        BackgroundTransparency = 1
-    })
-    tweenOut:Play()
+-- step strip
+local stepStrip = Instance.new("Frame")
+stepStrip.Size             = UDim2.new(1, -20, 0, 24)
+stepStrip.Position         = UDim2.new(0, 10, 0, 10)
+stepStrip.BackgroundColor3 = C.Void
+stepStrip.BorderSizePixel  = 0
+stepStrip.ZIndex           = 3
+stepStrip.Parent           = accessPage
+Instance.new("UICorner", stepStrip).CornerRadius = UDim.new(0, 5)
 
-    task.wait(0.3)
-    pcall(function() blur:Destroy() end)
-    pcall(function() screenGui:Destroy() end)
+-- thin top line
+local stripLine = Instance.new("Frame")
+stripLine.Size             = UDim2.new(1, 0, 0, 1)
+stripLine.BackgroundColor3 = C.BlueEdge
+stripLine.BorderSizePixel  = 0
+stripLine.ZIndex           = 4
+stripLine.Parent           = stepStrip
+
+local stepLayout2 = Instance.new("UIListLayout")
+stepLayout2.FillDirection = Enum.FillDirection.Horizontal
+stepLayout2.SortOrder     = Enum.SortOrder.LayoutOrder
+stepLayout2.Parent        = stepStrip
+
+local stepElems = {}
+for i, s in ipairs({"① Copy link", "② Join group", "③ Verify"}) do
+    local seg = Instance.new("TextLabel")
+    seg.Text                 = s
+    seg.Font                 = Enum.Font.Gotham
+    seg.TextSize             = 10
+    seg.TextColor3           = i==1 and C.Electric or C.Ghost
+    seg.BackgroundTransparency = 1
+    seg.Size                 = UDim2.new(0, 120, 1, 0)
+    seg.TextXAlignment       = Enum.TextXAlignment.Center
+    seg.LayoutOrder          = i
+    seg.ZIndex               = 4
+    seg.Parent               = stepStrip
+    stepElems[i] = seg
+end
+
+local function setStep(n)
+    for i, seg in ipairs(stepElems) do
+        seg.TextColor3 = (i==n) and C.Electric or (i<n) and C.Success or C.Ghost
+    end
+end
+
+-- desc
+local accDesc = Instance.new("TextLabel")
+accDesc.Text                 = "Access is free — join the group to unlock VOID HUB."
+accDesc.Font                 = Enum.Font.Gotham
+accDesc.TextSize             = 10
+accDesc.TextColor3           = C.Ghost
+accDesc.BackgroundTransparency = 1
+accDesc.Size                 = UDim2.new(1, -20, 0, 24)
+accDesc.Position             = UDim2.new(0, 10, 0, 42)
+accDesc.TextXAlignment       = Enum.TextXAlignment.Left
+accDesc.TextWrapped          = true
+accDesc.ZIndex               = 3
+accDesc.Parent               = accessPage
+
+-- status box
+local statusBox = Instance.new("Frame")
+statusBox.Size             = UDim2.new(1, -20, 0, 48)
+statusBox.Position         = UDim2.new(0, 10, 0, 72)
+statusBox.BackgroundColor3 = C.Void
+statusBox.BorderSizePixel  = 0
+statusBox.ZIndex           = 3
+statusBox.Parent           = accessPage
+Instance.new("UICorner", statusBox).CornerRadius = UDim.new(0, 6)
+
+-- left color bar
+local statusBar = Instance.new("Frame")
+statusBar.Size             = UDim2.new(0, 3, 1, 0)
+statusBar.BackgroundColor3 = C.Fail
+statusBar.BorderSizePixel  = 0
+statusBar.ZIndex           = 4
+statusBar.Parent           = statusBox
+Instance.new("UICorner", statusBar).CornerRadius = UDim.new(0, 3)
+
+local statusIcon = Instance.new("TextLabel")
+statusIcon.Text                 = "✗"
+statusIcon.Font                 = Enum.Font.GothamBold
+statusIcon.TextSize             = 18
+statusIcon.TextColor3           = C.Fail
+statusIcon.BackgroundTransparency = 1
+statusIcon.Size                 = UDim2.new(0, 36, 1, 0)
+statusIcon.Position             = UDim2.new(0, 4, 0, 0)
+statusIcon.TextXAlignment       = Enum.TextXAlignment.Center
+statusIcon.ZIndex               = 4
+statusIcon.Parent               = statusBox
+
+local statusText = Instance.new("TextLabel")
+statusText.Text                 = "Not in group"
+statusText.Font                 = Enum.Font.GothamBold
+statusText.TextSize             = 12
+statusText.TextColor3           = C.White
+statusText.BackgroundTransparency = 1
+statusText.Size                 = UDim2.new(1, -48, 0, 20)
+statusText.Position             = UDim2.new(0, 44, 0, 6)
+statusText.TextXAlignment       = Enum.TextXAlignment.Left
+statusText.ZIndex               = 4
+statusText.Parent               = statusBox
+
+local statusSub = Instance.new("TextLabel")
+statusSub.Text                 = "Copy the group link below and join to get access."
+statusSub.Font                 = Enum.Font.Gotham
+statusSub.TextSize             = 9
+statusSub.TextColor3           = C.Ghost
+statusSub.BackgroundTransparency = 1
+statusSub.Size                 = UDim2.new(1, -48, 0, 14)
+statusSub.Position             = UDim2.new(0, 44, 0, 28)
+statusSub.TextXAlignment       = Enum.TextXAlignment.Left
+statusSub.TextWrapped          = true
+statusSub.ZIndex               = 4
+statusSub.Parent               = statusBox
+
+local copyGrpBtn = makeBtn(accessPage, "🔗  Copy Group Link", 132, true)
+local verifyBtn  = makeBtn(accessPage, "↺  I joined — verify access", 174, false)
+
+local function applyGroupGranted()
+    statusBar.BackgroundColor3  = C.Success
+    statusIcon.Text             = "✓"
+    statusIcon.TextColor3       = C.Success
+    statusText.Text             = "Access granted!"
+    statusSub.Text              = "You are a member. VOID HUB is fully unlocked."
+    statusSub.TextColor3        = C.Success
+    verifyBtn.Text              = "✓  Verified — you're in!"
+    verifyBtn.BackgroundColor3  = C.Success
+    copyGrpBtn.Visible          = false
+    setStep(3)
+end
+
+copyGrpBtn.MouseButton1Click:Connect(function()
+    copyToClipboard(HUB.GROUP_URL)
+    copyGrpBtn.Text             = "✓  Copied! Paste in your browser"
+    setStep(2)
+    task.delay(2.5, function() copyGrpBtn.Text = "🔗  Copy Group Link" end)
 end)
-end) -- Close the loading sequence task
+
+verifyBtn.MouseButton1Click:Connect(function()
+    verifyBtn.Text = "Checking..."
+    setStep(3)
+    task.spawn(function()
+        if checkGroup() then
+            applyGroupGranted()
+            renderChecks(buildChecks())
+        else
+            statusText.Text            = "Not in group"
+            statusSub.Text             = "Join the group first, then click verify."
+            statusSub.TextColor3       = C.Ghost
+            verifyBtn.Text             = "✗  Not detected — try again"
+            verifyBtn.BackgroundColor3 = C.Fail
+            setStep(1)
+            task.delay(2, function()
+                verifyBtn.Text             = "↺  I joined — verify access"
+                verifyBtn.BackgroundColor3 = C.NavyMid
+            end)
+        end
+    end)
+end)
+
+local accDisc = Instance.new("TextLabel")
+accDisc.Text                 = "discord: " .. HUB.Discord
+accDisc.Font                 = Enum.Font.Gotham
+accDisc.TextSize             = 9
+accDisc.TextColor3           = C.Ghost
+accDisc.BackgroundTransparency = 1
+accDisc.Size                 = UDim2.new(1, -20, 0, 12)
+accDisc.Position             = UDim2.new(0, 10, 1, -16)
+accDisc.TextXAlignment       = Enum.TextXAlignment.Left
+accDisc.ZIndex               = 3
+accDisc.Parent               = accessPage
+
+task.spawn(function()
+    if checkGroup() then applyGroupGranted() end
+end)
+
+-- ============================================================
+--  GUIDE PAGE
+-- ============================================================
+
+local guidePage = makePage("Guide")
+
+local guideTitle = Instance.new("TextLabel")
+guideTitle.Text                 = "Quick Guide"
+guideTitle.Font                 = Enum.Font.GothamBold
+guideTitle.TextSize             = 13
+guideTitle.TextColor3           = C.White
+guideTitle.BackgroundTransparency = 1
+guideTitle.Size                 = UDim2.new(1, -20, 0, 20)
+guideTitle.Position             = UDim2.new(0, 10, 0, 10)
+guideTitle.TextXAlignment       = Enum.TextXAlignment.Left
+guideTitle.ZIndex               = 3
+guideTitle.Parent               = guidePage
+
+local guideSep = Instance.new("Frame")
+guideSep.Size             = UDim2.new(1, -20, 0, 1)
+guideSep.Position         = UDim2.new(0, 10, 0, 34)
+guideSep.BackgroundColor3 = C.BlueEdge
+guideSep.BorderSizePixel  = 0
+guideSep.ZIndex           = 3
+guideSep.Parent           = guidePage
+
+local guideLbl = Instance.new("TextLabel")
+guideLbl.Text = "1.  Attach your executor before injecting.\n" ..
+                "2.  Go to Access tab → Copy Group Link.\n" ..
+                "3.  Paste into browser and join the group.\n" ..
+                "4.  Click \"I joined — verify access\".\n" ..
+                "5.  Green = unlocked. Scripts load automatically.\n\n" ..
+                "Executors:\nSynapse X · KRNL · Script-Ware · Fluxus\n" ..
+                "Evon · Arceus X · Delta · Hydrogen · AWP\n\n" ..
+                "discord: " .. HUB.Discord
+guideLbl.Font                 = Enum.Font.Gotham
+guideLbl.TextSize             = 11
+guideLbl.TextColor3           = C.Ghost
+guideLbl.BackgroundTransparency = 1
+guideLbl.Size                 = UDim2.new(1, -20, 1, -50)
+guideLbl.Position             = UDim2.new(0, 10, 0, 42)
+guideLbl.TextXAlignment       = Enum.TextXAlignment.Left
+guideLbl.TextYAlignment       = Enum.TextYAlignment.Top
+guideLbl.TextWrapped          = true
+guideLbl.ZIndex               = 3
+guideLbl.Parent               = guidePage
+
+-- ============================================================
+--  SYSTEM PAGE
+-- ============================================================
+
+local systemPage = makePage("System")
+
+local sysTitle = Instance.new("TextLabel")
+sysTitle.Text                 = "Live checks"
+sysTitle.Font                 = Enum.Font.GothamBold
+sysTitle.TextSize             = 13
+sysTitle.TextColor3           = C.White
+sysTitle.BackgroundTransparency = 1
+sysTitle.Size                 = UDim2.new(1, -20, 0, 20)
+sysTitle.Position             = UDim2.new(0, 10, 0, 10)
+sysTitle.TextXAlignment       = Enum.TextXAlignment.Left
+sysTitle.ZIndex               = 3
+sysTitle.Parent               = systemPage
+
+local sysSep = Instance.new("Frame")
+sysSep.Size             = UDim2.new(1, -20, 0, 1)
+sysSep.Position         = UDim2.new(0, 10, 0, 34)
+sysSep.BackgroundColor3 = C.BlueEdge
+sysSep.BorderSizePixel  = 0
+sysSep.ZIndex           = 3
+sysSep.Parent           = systemPage
+
+local checkList = Instance.new("Frame")
+checkList.Size                = UDim2.new(1, -20, 0, 148)
+checkList.Position            = UDim2.new(0, 10, 0, 42)
+checkList.BackgroundTransparency = 1
+checkList.ClipsDescendants    = true
+checkList.ZIndex              = 3
+checkList.Parent              = systemPage
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding   = UDim.new(0, 3)
+listLayout.Parent    = checkList
+
+function renderChecks(checks)
+    for _, child in ipairs(checkList:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    for i, chk in ipairs(checks) do
+        local row = Instance.new("Frame")
+        row.Size                   = UDim2.new(1, 0, 0, 20)
+        row.BackgroundColor3       = C.Void
+        row.BorderSizePixel        = 0
+        row.LayoutOrder            = i
+        row.ZIndex                 = 3
+        row.Parent                 = checkList
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 4)
+
+        local rowBar = Instance.new("Frame")
+        rowBar.Size             = UDim2.new(0, 2, 0.6, 0)
+        rowBar.Position         = UDim2.new(0, 0, 0.2, 0)
+        rowBar.BackgroundColor3 = chk.passed and C.Success or C.Fail
+        rowBar.BorderSizePixel  = 0
+        rowBar.ZIndex           = 4
+        rowBar.Parent           = row
+        Instance.new("UICorner", rowBar).CornerRadius = UDim.new(0, 2)
+
+        local icon = Instance.new("TextLabel")
+        icon.Text                 = chk.passed and "✓" or "✗"
+        icon.Font                 = Enum.Font.GothamBold
+        icon.TextSize             = 11
+        icon.TextColor3           = chk.passed and C.Success or C.Fail
+        icon.BackgroundTransparency = 1
+        icon.Size                 = UDim2.new(0, 20, 1, 0)
+        icon.Position             = UDim2.new(0, 4, 0, 0)
+        icon.TextXAlignment       = Enum.TextXAlignment.Center
+        icon.ZIndex               = 4
+        icon.Parent               = row
+
+        local lbel = Instance.new("TextLabel")
+        lbel.Text                 = chk.label
+        lbel.Font                 = Enum.Font.Gotham
+        lbel.TextSize             = 10
+        lbel.TextColor3           = C.Ghost
+        lbel.BackgroundTransparency = 1
+        lbel.Size                 = UDim2.new(1, -28, 1, 0)
+        lbel.Position             = UDim2.new(0, 26, 0, 0)
+        lbel.TextXAlignment       = Enum.TextXAlignment.Left
+        lbel.ZIndex               = 4
+        lbel.Parent               = row
+    end
+end
+
+renderChecks(buildChecks())
+
+local copyGroupBtn = makeBtn(systemPage, "🔗  Copy Group Link  (join to unlock)", 198, false)
+local copyInfoBtn  = makeBtn(systemPage, "📋  Copy Support Info", 232, false)
+local copyLinkBtn  = makeBtn(systemPage, "🔗  Copy Backup Link", 266, false)
+
+copyGroupBtn.MouseButton1Click:Connect(function()
+    copyToClipboard(HUB.GROUP_URL)
+    copyGroupBtn.Text = "✓  Copied — paste in browser"
+    task.delay(2, function() copyGroupBtn.Text = "🔗  Copy Group Link  (join to unlock)" end)
+end)
+
+copyInfoBtn.MouseButton1Click:Connect(function()
+    local info = ("VOID HUB %s | %s | Executor: %s | Age: %d days | Game: %d")
+        :format(HUB.Version, LocalPlayer.Name, detectExecutor(), getAccountAge(), game.PlaceId)
+    copyToClipboard(info)
+    copyInfoBtn.Text = "✓  Copied!"
+    task.delay(1.5, function() copyInfoBtn.Text = "📋  Copy Support Info" end)
+end)
+
+copyLinkBtn.MouseButton1Click:Connect(function()
+    copyToClipboard(HUB.BackupURL)
+    copyLinkBtn.Text = "✓  Copied!"
+    task.delay(1.5, function() copyLinkBtn.Text = "🔗  Copy Backup Link" end)
+end)
+
+-- ============================================================
+--  TAB SWITCH
+-- ============================================================
+
+local function switchTab(name)
+    activeTab = name
+    for tName, page in pairs(tabPages) do page.Visible = (tName==name) end
+    for tName, btn in pairs(tabBtns) do
+        local active = (tName==name)
+        btn.TextColor3       = active and C.White or C.Ghost
+        btn.BackgroundColor3 = active and C.Electric or C.NavyMid
+    end
+end
+
+for name, btn in pairs(tabBtns) do
+    btn.MouseButton1Click:Connect(function() switchTab(name) end)
+end
+
+switchTab("System")
+
+-- ============================================================
+--  FADE IN
+-- ============================================================
+
+Root.BackgroundTransparency = 1
+TweenService:Create(Root, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
+    BackgroundTransparency = 0
+}):Play()
+
+-- ============================================================
+--  KEYBIND
+-- ============================================================
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        Root.Visible = not Root.Visible
+    end
+end)
+
+-- ============================================================
+--  LOADER
+-- ============================================================
+
+local function loadMain()
+    if HUB.SCRIPT_URL == "" then return end
+    if not httpRequest then warn("[VOID HUB] No HTTP function.") return end
+    local ok, res = pcall(httpRequest, { Url=HUB.SCRIPT_URL, Method="GET" })
+    if ok and res and res.StatusCode==200 then
+        local fn, err = _loadstring(res.Body)
+        if fn then pcall(fn) else warn("[VOID HUB] loadstring: "..tostring(err)) end
+    else
+        warn("[VOID HUB] Fetch failed: "..tostring(ok and res and res.StatusCode or "N/A"))
+    end
+end
+
+task.spawn(loadMain)
+print("[VOID HUB] Loaded — "..HUB.Version)
