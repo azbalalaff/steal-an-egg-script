@@ -1,626 +1,327 @@
 --[[
-    ██╗   ██╗ ██████╗ ██╗██████╗     ██╗  ██╗██╗   ██╗██████╗ 
-    ██║   ██║██╔═══██╗██║██╔══██╗    ██║  ██║██║   ██║██╔══██╗
-    ██║   ██║██║   ██║██║██║  ██║    ███████║██║   ██║██████╔╝
-    ╚██╗ ██╔╝██║   ██║██║██║  ██║    ██╔══██║██║   ██║██╔══██╗
-     ╚████╔╝ ╚██████╔╝██║██████╔╝    ██║  ██║╚██████╔╝██████╔╝
-      ╚═══╝   ╚═════╝ ╚═╝╚═════╝     ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ 
-
     VOID HUB  |  Nova Edition  |  v1.0
-    Theme: Glitch / Cold Electric
+    Theme: Cold Electric / Premium
 --]]
 
--- ============================================================
---  COMPAT
--- ============================================================
-
 local _loadstring = loadstring or load
+local httpRequest = (syn and syn.request) or (http and http.request)
+    or (fluxus and fluxus.request) or (typeof(request)=="function" and request) or nil
 
-local httpRequest = (syn and syn.request)
-    or (http and http.request)
-    or (fluxus and fluxus.request)
-    or (typeof(request) == "function" and request)
-    or nil
-
-local function copyToClipboard(text)
-    if setclipboard then setclipboard(text)
-    elseif toclipboard then toclipboard(text)
-    elseif Clipboard then Clipboard.set(text) end
+local function copyToClipboard(t)
+    if setclipboard then setclipboard(t)
+    elseif toclipboard then toclipboard(t)
+    elseif Clipboard then Clipboard.set(t) end
 end
-
--- ============================================================
---  SERVICES
--- ============================================================
 
 local Players          = game:GetService("Players")
 local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService       = game:GetService("RunService")
 local CoreGui          = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
-
--- ============================================================
---  CONFIG
--- ============================================================
+local LocalPlayer      = Players.LocalPlayer
+local PlayerGui        = LocalPlayer:WaitForChild("PlayerGui")
 
 local HUB = {
     Name       = "VOID HUB",
-    Sub        = "Nova Edition",
+    Sub        = "PREMIUM",
     Version    = "v1.0",
-    Author     = "Void",
     MinAge     = 10,
-    GROUP_ID   = 0,
-    GROUP_URL  = "https://www.roblox.ly/communities/1232935860/Void-Hub",
-    BackupURL  = "https://www.roblox.ly/communities/1232935860/Void-Hub",
+    GROUP_ID   = 465621544,
+    GROUP_URL  = "https://www.roblox.ly/communities/1232935860/Void-Hub#!/about",
+    BackupURL  = "https://www.roblox.ly/communities/1232935860/Void-Hub#!/about",
     Discord    = "discord.gg/a4xs2D2hcD",
     SCRIPT_URL = "",
 }
 
--- ============================================================
---  THEME — extracted from image
---  Deep void black · cold electric blue · blown white glow
---  Navy shadow · glitch-bright cyan highlight
--- ============================================================
-
 local C = {
-    -- backgrounds
-    Void        = Color3.fromRGB(4,   5,   8),    -- deepest black from silhouette
-    Deep        = Color3.fromRGB(8,   10,  16),   -- body dark
-    Surface     = Color3.fromRGB(12,  15,  24),   -- panel surface
-    Sidebar     = Color3.fromRGB(6,   8,   14),   -- sidebar dark
-
-    -- blues (from the electric glow + glitch bands)
-    Electric    = Color3.fromRGB(40,  120, 255),  -- core electric blue
-    Glitch      = Color3.fromRGB(80,  180, 255),  -- bright glitch cyan
-    NavyMid     = Color3.fromRGB(18,  30,  60),   -- dark navy mid
-    BlueEdge    = Color3.fromRGB(20,  55,  120),  -- border edge blue
-
-    -- glow / white (blown highlight from the image)
-    Blowout     = Color3.fromRGB(200, 225, 255),  -- near-white cold glow
-    Ghost       = Color3.fromRGB(130, 170, 220),  -- dim ghost text
-
-    -- states
-    Success     = Color3.fromRGB(50,  200, 140),
-    Fail        = Color3.fromRGB(200, 50,  70),
-    White       = Color3.fromRGB(230, 240, 255),  -- cold white (not warm)
+    Void     = Color3.fromRGB(4,   5,   8),
+    Deep     = Color3.fromRGB(10,  12,  20),
+    Surface  = Color3.fromRGB(14,  17,  28),
+    Card     = Color3.fromRGB(18,  22,  36),
+    Sidebar  = Color3.fromRGB(8,   10,  18),
+    Electric = Color3.fromRGB(40,  120, 255),
+    Glitch   = Color3.fromRGB(80,  180, 255),
+    Navy     = Color3.fromRGB(18,  30,  60),
+    Edge     = Color3.fromRGB(25,  55,  130),
+    Ghost    = Color3.fromRGB(120, 160, 210),
+    Dim      = Color3.fromRGB(70,  90,  140),
+    Success  = Color3.fromRGB(50,  200, 140),
+    Fail     = Color3.fromRGB(200, 55,  75),
+    White    = Color3.fromRGB(225, 235, 255),
+    Badge    = Color3.fromRGB(138, 43,  226),
 }
 
--- ============================================================
---  HELPERS
--- ============================================================
-
-local function getAccountAge()
-    local ok, age = pcall(function() return LocalPlayer.AccountAge end)
-    return ok and age or 0
-end
-
-local function detectExecutor()
+local function getAge() local ok,a=pcall(function() return LocalPlayer.AccountAge end) return ok and a or 0 end
+local function getExec()
     if syn then return "Synapse X" end
     if KRNL_LOADED or krnl then return "KRNL" end
-    if fluxus ~= nil then return "Fluxus" end
-    if getexecutorname then
-        local ok, n = pcall(getexecutorname); if ok and n then return n end
-    end
-    if identifyexecutor then
-        local ok, n = pcall(identifyexecutor); if ok and n then return n end
-    end
+    if fluxus then return "Fluxus" end
+    if getexecutorname then local ok,n=pcall(getexecutorname) if ok and n then return n end end
+    if identifyexecutor then local ok,n=pcall(identifyexecutor) if ok and n then return n end end
     return "Unknown"
 end
-
-local function checkClipboard()
-    return (setclipboard ~= nil) or (toclipboard ~= nil) or (Clipboard ~= nil)
+local function hasClip() return setclipboard~=nil or toclipboard~=nil end
+local function inGroup()
+    if HUB.GROUP_ID==0 then return false end
+    local ok,r=pcall(function() return LocalPlayer:IsInGroup(HUB.GROUP_ID) end)
+    return ok and r==true
 end
-
-local function checkGroup()
-    if HUB.GROUP_ID == 0 then return false end
-    local ok, result = pcall(function() return LocalPlayer:IsInGroup(HUB.GROUP_ID) end)
-    return ok and result == true
-end
-
 local function buildChecks()
-    local inGroup = checkGroup()
+    local g=inGroup()
     return {
-        { key="age",       label=("Account age: %d days (min %d)"):format(getAccountAge(), HUB.MinAge), passed=getAccountAge()>=HUB.MinAge },
-        { key="group",     label=inGroup and "Group membership: detected" or "Group membership: not detected yet", passed=inGroup },
-        { key="executor",  label=("Executor: %s"):format(detectExecutor()), passed=true },
-        { key="clipboard", label="Clipboard support",     passed=checkClipboard() },
-        { key="device",    label="Device: PC · Full mode", passed=true },
-        { key="backup",    label="Backup link ready",     passed=HUB.BackupURL~="" },
+        {label=string.format("Account age: %d days (min %d)",getAge(),HUB.MinAge), passed=getAge()>=HUB.MinAge},
+        {label=g and "Group membership: detected" or "Group membership: not detected yet", passed=g},
+        {label="Executor: "..getExec(), passed=true},
+        {label="Clipboard support", passed=hasClip()},
+        {label="Device: PC · Full mode", passed=true},
+        {label="Backup link ready", passed=HUB.BackupURL~=""},
     }
 end
 
--- ============================================================
---  CLEANUP
--- ============================================================
-
 pcall(function()
-    if CoreGui:FindFirstChild("VoidHub")   then CoreGui.VoidHub:Destroy()   end
+    if CoreGui:FindFirstChild("VoidHub") then CoreGui.VoidHub:Destroy() end
     if PlayerGui:FindFirstChild("VoidHub") then PlayerGui.VoidHub:Destroy() end
 end)
 
--- ============================================================
---  SCREENGUI
--- ============================================================
+-- ── ScreenGui ─────────────────────────────────────────────────
+local SG = Instance.new("ScreenGui")
+SG.Name="VoidHub" SG.ResetOnSpawn=false SG.ZIndexBehavior=Enum.ZIndexBehavior.Sibling SG.DisplayOrder=999
+if not pcall(function() SG.Parent=CoreGui end) then SG.Parent=PlayerGui end
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name           = "VoidHub"
-ScreenGui.ResetOnSpawn   = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder   = 999
-local _pok = pcall(function() ScreenGui.Parent = CoreGui end)
-if not _pok then ScreenGui.Parent = PlayerGui end
-
--- ============================================================
---  ROOT
--- ============================================================
-
-local SIDEBAR_W = 150
-local ROOT_W    = 660
-local ROOT_H    = 400
-
+local W,H = 680,440
 local Root = Instance.new("Frame")
-Root.Name             = "Root"
-Root.Size             = UDim2.new(0, ROOT_W, 0, ROOT_H)
-Root.Position         = UDim2.new(0.5, -ROOT_W/2, 0.5, -ROOT_H/2)
-Root.BackgroundColor3 = C.Deep
-Root.BorderSizePixel  = 0
-Root.Active           = true
-Root.Draggable        = true
-Root.Parent           = ScreenGui
-Instance.new("UICorner", Root).CornerRadius = UDim.new(0, 12)
+Root.Name="Root" Root.Size=UDim2.new(0,W,0,H) Root.Position=UDim2.new(0.5,-W/2,0.5,-H/2)
+Root.BackgroundColor3=C.Deep Root.BorderSizePixel=0 Root.Active=true Root.Draggable=true Root.Parent=SG
+Instance.new("UICorner",Root).CornerRadius=UDim.new(0,14)
 
--- outer glow border — electric blue
-local Bord = Instance.new("Frame")
-Bord.Size             = UDim2.new(1, 2, 1, 2)
-Bord.Position         = UDim2.new(0, -1, 0, -1)
-Bord.BackgroundColor3 = C.Electric
-Bord.BorderSizePixel  = 0
-Bord.ZIndex           = 0
-Bord.Parent           = Root
-Instance.new("UICorner", Bord).CornerRadius = UDim.new(0, 13)
+-- glow ring
+local Glow=Instance.new("Frame") Glow.Size=UDim2.new(1,4,1,4) Glow.Position=UDim2.new(0,-2,0,-2)
+Glow.BackgroundColor3=C.Electric Glow.BorderSizePixel=0 Glow.ZIndex=0 Glow.Parent=Root
+Instance.new("UICorner",Glow).CornerRadius=UDim.new(0,16)
 
--- inner shadow frame to give depth
-local InnerShadow = Instance.new("Frame")
-InnerShadow.Size             = UDim2.new(1, -2, 1, -2)
-InnerShadow.Position         = UDim2.new(0, 1, 0, 1)
-InnerShadow.BackgroundColor3 = C.BlueEdge
-InnerShadow.BorderSizePixel  = 0
-InnerShadow.ZIndex           = 0
-InnerShadow.Parent           = Root
-Instance.new("UICorner", InnerShadow).CornerRadius = UDim.new(0, 12)
+local GlowInner=Instance.new("Frame") GlowInner.Size=UDim2.new(1,-2,1,-2) GlowInner.Position=UDim2.new(0,1,0,1)
+GlowInner.BackgroundColor3=C.Edge GlowInner.BorderSizePixel=0 GlowInner.ZIndex=0 GlowInner.Parent=Root
+Instance.new("UICorner",GlowInner).CornerRadius=UDim.new(0,14)
 
--- content sits on top
-local ContentRoot = Instance.new("Frame")
-ContentRoot.Size             = UDim2.new(1, -2, 1, -2)
-ContentRoot.Position         = UDim2.new(0, 1, 0, 1)
-ContentRoot.BackgroundColor3 = C.Deep
-ContentRoot.BorderSizePixel  = 0
-ContentRoot.ZIndex           = 1
-ContentRoot.Parent           = Root
-Instance.new("UICorner", ContentRoot).CornerRadius = UDim.new(0, 11)
+local CR=Instance.new("Frame") CR.Size=UDim2.new(1,-2,1,-2) CR.Position=UDim2.new(0,1,0,1)
+CR.BackgroundColor3=C.Deep CR.BorderSizePixel=0 CR.ZIndex=1 CR.Parent=Root
+Instance.new("UICorner",CR).CornerRadius=UDim.new(0,13)
 
--- ============================================================
---  TOP BAR
--- ============================================================
+-- ── Top bar ───────────────────────────────────────────────────
+local TB=Instance.new("Frame") TB.Size=UDim2.new(1,0,0,54) TB.BackgroundColor3=C.Void
+TB.BorderSizePixel=0 TB.ZIndex=2 TB.Parent=CR
+Instance.new("UICorner",TB).CornerRadius=UDim.new(0,13)
+local TBFix=Instance.new("Frame") TBFix.Size=UDim2.new(1,0,0,14) TBFix.Position=UDim2.new(0,0,1,-14)
+TBFix.BackgroundColor3=C.Void TBFix.BorderSizePixel=0 TBFix.ZIndex=2 TBFix.Parent=TB
+local TBLine=Instance.new("Frame") TBLine.Size=UDim2.new(1,0,0,1) TBLine.Position=UDim2.new(0,0,1,-1)
+TBLine.BackgroundColor3=C.Edge TBLine.BorderSizePixel=0 TBLine.ZIndex=3 TBLine.Parent=TB
 
-local TopBar = Instance.new("Frame")
-TopBar.Size             = UDim2.new(1, 0, 0, 44)
-TopBar.BackgroundColor3 = C.Void
-TopBar.BorderSizePixel  = 0
-TopBar.ZIndex           = 2
-TopBar.Parent           = ContentRoot
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 11)
+-- avatar in topbar
+local TAvatarRing=Instance.new("Frame") TAvatarRing.Size=UDim2.new(0,38,0,38) TAvatarRing.Position=UDim2.new(0,10,0.5,-19)
+TAvatarRing.BackgroundColor3=C.Electric TAvatarRing.BorderSizePixel=0 TAvatarRing.ZIndex=3 TAvatarRing.Parent=TB
+Instance.new("UICorner",TAvatarRing).CornerRadius=UDim.new(1,0)
+local TAvatarIn=Instance.new("Frame") TAvatarIn.Size=UDim2.new(1,-4,1,-4) TAvatarIn.Position=UDim2.new(0,2,0,2)
+TAvatarIn.BackgroundColor3=C.Void TAvatarIn.BorderSizePixel=0 TAvatarIn.ZIndex=4 TAvatarIn.Parent=TAvatarRing
+Instance.new("UICorner",TAvatarIn).CornerRadius=UDim.new(1,0)
+local TAvatarImg=Instance.new("ImageLabel") TAvatarImg.Size=UDim2.new(1,0,1,0)
+TAvatarImg.BackgroundTransparency=1 TAvatarImg.Image="" TAvatarImg.ZIndex=5 TAvatarImg.Parent=TAvatarIn
+Instance.new("UICorner",TAvatarImg).CornerRadius=UDim.new(1,0)
+task.spawn(function()
+    local ok,img=pcall(function() return Players:GetUserThumbnailAsync(LocalPlayer.UserId,Enum.ThumbnailType.AvatarBust,Enum.ThumbnailSize.Size100x100) end)
+    if ok and img then TAvatarImg.Image=img end
+end)
 
-local TBFix = Instance.new("Frame")
-TBFix.Size             = UDim2.new(1, 0, 0, 12)
-TBFix.Position         = UDim2.new(0, 0, 1, -12)
-TBFix.BackgroundColor3 = C.Void
-TBFix.BorderSizePixel  = 0
-TBFix.ZIndex           = 2
-TBFix.Parent           = TopBar
+-- hub name + badge
+local HubName=Instance.new("TextLabel") HubName.Text=HUB.Name HubName.Font=Enum.Font.GothamBold
+HubName.TextSize=15 HubName.TextColor3=C.White HubName.BackgroundTransparency=1
+HubName.Size=UDim2.new(0,140,0,20) HubName.Position=UDim2.new(0,56,0,8) HubName.TextXAlignment=Enum.TextXAlignment.Left
+HubName.ZIndex=3 HubName.Parent=TB
 
--- thin blue bottom line on topbar
-local TopLine = Instance.new("Frame")
-TopLine.Size             = UDim2.new(1, 0, 0, 1)
-TopLine.Position         = UDim2.new(0, 0, 1, -1)
-TopLine.BackgroundColor3 = C.Electric
-TopLine.BorderSizePixel  = 0
-TopLine.ZIndex           = 3
-TopLine.Parent           = TopBar
+local Badge=Instance.new("Frame") Badge.Size=UDim2.new(0,90,0,18) Badge.Position=UDim2.new(0,56,0,28)
+Badge.BackgroundColor3=C.Badge Badge.BorderSizePixel=0 Badge.ZIndex=3 Badge.Parent=TB
+Instance.new("UICorner",Badge).CornerRadius=UDim.new(0,4)
+local BadgeLbl=Instance.new("TextLabel") BadgeLbl.Text=HUB.Sub.." "..HUB.Version
+BadgeLbl.Font=Enum.Font.GothamBold BadgeLbl.TextSize=9 BadgeLbl.TextColor3=C.White
+BadgeLbl.BackgroundTransparency=1 BadgeLbl.Size=UDim2.new(1,0,1,0) BadgeLbl.TextXAlignment=Enum.TextXAlignment.Center
+BadgeLbl.ZIndex=4 BadgeLbl.Parent=Badge
 
--- glitch dot
-local Dot = Instance.new("Frame")
-Dot.Size             = UDim2.new(0, 8, 0, 8)
-Dot.Position         = UDim2.new(0, 16, 0.5, -4)
-Dot.BackgroundColor3 = C.Glitch
-Dot.BorderSizePixel  = 0
-Dot.ZIndex           = 3
-Dot.Parent           = TopBar
-Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
+-- FPS/ping live display (top right like AURORA)
+local StatsFrame=Instance.new("Frame") StatsFrame.Size=UDim2.new(0,160,0,26) StatsFrame.Position=UDim2.new(1,-200,0.5,-13)
+StatsFrame.BackgroundColor3=C.Navy StatsFrame.BorderSizePixel=0 StatsFrame.ZIndex=3 StatsFrame.Parent=TB
+Instance.new("UICorner",StatsFrame).CornerRadius=UDim.new(0,6)
+local StatsBar=Instance.new("Frame") StatsBar.Size=UDim2.new(0,2,0.7,0) StatsBar.Position=UDim2.new(0,0,0.15,0)
+StatsBar.BackgroundColor3=C.Electric StatsBar.BorderSizePixel=0 StatsBar.ZIndex=4 StatsBar.Parent=StatsFrame
+local StatsLbl=Instance.new("TextLabel") StatsLbl.Text="-- FPS  ·  --ms"
+StatsLbl.Font=Enum.Font.GothamBold StatsLbl.TextSize=10 StatsLbl.TextColor3=C.Glitch
+StatsLbl.BackgroundTransparency=1 StatsLbl.Size=UDim2.new(1,-8,1,0) StatsLbl.Position=UDim2.new(0,6,0,0)
+StatsLbl.TextXAlignment=Enum.TextXAlignment.Center StatsLbl.ZIndex=4 StatsLbl.Parent=StatsFrame
 
--- glow behind dot
-local DotGlow = Instance.new("Frame")
-DotGlow.Size             = UDim2.new(0, 16, 0, 16)
-DotGlow.Position         = UDim2.new(0, 12, 0.5, -8)
-DotGlow.BackgroundColor3 = C.Electric
-DotGlow.BorderSizePixel  = 0
-DotGlow.BackgroundTransparency = 0.7
-DotGlow.ZIndex           = 2
-DotGlow.Parent           = TopBar
-Instance.new("UICorner", DotGlow).CornerRadius = UDim.new(1, 0)
+local fps_h={} RunService.RenderStepped:Connect(function(dt)
+    table.insert(fps_h,1/dt) if #fps_h>20 then table.remove(fps_h,1) end
+    local s=0 for _,v in ipairs(fps_h) do s=s+v end
+    StatsLbl.Text=string.format("%d FPS  ·  %dms",math.floor(s/#fps_h),math.floor(LocalPlayer:GetNetworkPing()*1000))
+end)
 
-local HubLbl = Instance.new("TextLabel")
-HubLbl.Text                 = HUB.Name
-HubLbl.Font                 = Enum.Font.GothamBold
-HubLbl.TextSize             = 14
-HubLbl.TextColor3           = C.White
-HubLbl.BackgroundTransparency = 1
-HubLbl.Size                 = UDim2.new(0, 140, 1, 0)
-HubLbl.Position             = UDim2.new(0, 34, 0, 0)
-HubLbl.TextXAlignment       = Enum.TextXAlignment.Left
-HubLbl.ZIndex               = 3
-HubLbl.Parent               = TopBar
-
-local SubLbl = Instance.new("TextLabel")
-SubLbl.Text                 = HUB.Sub
-SubLbl.Font                 = Enum.Font.Gotham
-SubLbl.TextSize             = 11
-SubLbl.TextColor3           = C.Electric
-SubLbl.BackgroundTransparency = 1
-SubLbl.Size                 = UDim2.new(0, 120, 1, 0)
-SubLbl.Position             = UDim2.new(0, 174, 0, 0)
-SubLbl.TextXAlignment       = Enum.TextXAlignment.Left
-SubLbl.ZIndex               = 3
-SubLbl.Parent               = TopBar
-
-local VerLbl = Instance.new("TextLabel")
-VerLbl.Text                 = HUB.Version
-VerLbl.Font                 = Enum.Font.Gotham
-VerLbl.TextSize             = 10
-VerLbl.TextColor3           = C.Ghost
-VerLbl.BackgroundTransparency = 1
-VerLbl.Size                 = UDim2.new(0, 50, 1, 0)
-VerLbl.Position             = UDim2.new(1, -90, 0, 0)
-VerLbl.TextXAlignment       = Enum.TextXAlignment.Right
-VerLbl.ZIndex               = 3
-VerLbl.Parent               = TopBar
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Text                 = "×"
-CloseBtn.Font                 = Enum.Font.GothamBold
-CloseBtn.TextSize             = 16
-CloseBtn.TextColor3           = C.Ghost
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Size                 = UDim2.new(0, 36, 1, 0)
-CloseBtn.Position             = UDim2.new(1, -38, 0, 0)
-CloseBtn.ZIndex               = 3
-CloseBtn.Parent               = TopBar
-
-CloseBtn.MouseEnter:Connect(function() CloseBtn.TextColor3 = C.Fail end)
-CloseBtn.MouseLeave:Connect(function() CloseBtn.TextColor3 = C.Ghost end)
+-- close button
+local CloseBtn=Instance.new("TextButton") CloseBtn.Text="×" CloseBtn.Font=Enum.Font.GothamBold
+CloseBtn.TextSize=18 CloseBtn.TextColor3=C.Ghost CloseBtn.BackgroundTransparency=1
+CloseBtn.Size=UDim2.new(0,36,1,0) CloseBtn.Position=UDim2.new(1,-38,0,0) CloseBtn.ZIndex=3 CloseBtn.Parent=TB
+CloseBtn.MouseEnter:Connect(function() CloseBtn.TextColor3=C.Fail end)
+CloseBtn.MouseLeave:Connect(function() CloseBtn.TextColor3=C.Ghost end)
 CloseBtn.MouseButton1Click:Connect(function()
-    TweenService:Create(Root, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-        Size     = UDim2.new(0, ROOT_W, 0, 0),
-        Position = UDim2.new(0.5, -ROOT_W/2, 0.5, 0),
-    }):Play()
-    task.delay(0.22, function() ScreenGui:Destroy() end)
+    TweenService:Create(Root,TweenInfo.new(0.2,Enum.EasingStyle.Quad),{Size=UDim2.new(0,W,0,0),Position=UDim2.new(0.5,-W/2,0.5,0)}):Play()
+    task.delay(0.22,function() SG:Destroy() end)
 end)
 
--- ============================================================
---  SIDEBAR
--- ============================================================
+-- ── Sidebar ───────────────────────────────────────────────────
+local SB=Instance.new("Frame") SB.Name="Sidebar" SB.Size=UDim2.new(0,160,1,-54) SB.Position=UDim2.new(0,0,0,54)
+SB.BackgroundColor3=C.Sidebar SB.BorderSizePixel=0 SB.ZIndex=2 SB.Parent=CR
+Instance.new("UICorner",SB).CornerRadius=UDim.new(0,13)
+local SBR=Instance.new("Frame") SBR.Size=UDim2.new(0,14,1,0) SBR.Position=UDim2.new(1,-14,0,0)
+SBR.BackgroundColor3=C.Sidebar SBR.BorderSizePixel=0 SBR.ZIndex=2 SBR.Parent=SB
+local SBT=Instance.new("Frame") SBT.Size=UDim2.new(1,0,0,14) SBT.BackgroundColor3=C.Sidebar
+SBT.BorderSizePixel=0 SBT.ZIndex=2 SBT.Parent=SB
+local SBDiv=Instance.new("Frame") SBDiv.Size=UDim2.new(0,1,1,0) SBDiv.Position=UDim2.new(1,-1,0,0)
+SBDiv.BackgroundColor3=C.Edge SBDiv.BorderSizePixel=0 SBDiv.ZIndex=3 SBDiv.Parent=SB
 
-local Sidebar = Instance.new("Frame")
-Sidebar.Name             = "Sidebar"
-Sidebar.Size             = UDim2.new(0, SIDEBAR_W, 1, -44)
-Sidebar.Position         = UDim2.new(0, 0, 0, 44)
-Sidebar.BackgroundColor3 = C.Sidebar
-Sidebar.BorderSizePixel  = 0
-Sidebar.ZIndex           = 2
-Sidebar.Parent           = ContentRoot
-
-local SBCorner = Instance.new("UICorner")
-SBCorner.CornerRadius = UDim.new(0, 11)
-SBCorner.Parent       = Sidebar
-
--- kill top-right + bottom-right rounding
-local SBFixR = Instance.new("Frame")
-SBFixR.Size             = UDim2.new(0, 12, 1, 0)
-SBFixR.Position         = UDim2.new(1, -12, 0, 0)
-SBFixR.BackgroundColor3 = C.Sidebar
-SBFixR.BorderSizePixel  = 0
-SBFixR.ZIndex           = 2
-SBFixR.Parent           = Sidebar
-
-local SBFixT = Instance.new("Frame")
-SBFixT.Size             = UDim2.new(1, 0, 0, 12)
-SBFixT.Position         = UDim2.new(0, 0, 0, 0)
-SBFixT.BackgroundColor3 = C.Sidebar
-SBFixT.BorderSizePixel  = 0
-SBFixT.ZIndex           = 2
-SBFixT.Parent           = Sidebar
-
--- right divider line
-local SBLine = Instance.new("Frame")
-SBLine.Size             = UDim2.new(0, 1, 1, 0)
-SBLine.Position         = UDim2.new(1, -1, 0, 0)
-SBLine.BackgroundColor3 = C.BlueEdge
-SBLine.BorderSizePixel  = 0
-SBLine.ZIndex           = 3
-SBLine.Parent           = Sidebar
-
--- ── Avatar ring ───────────────────────────────────────────────
-local AvatarRing = Instance.new("Frame")
-AvatarRing.Size             = UDim2.new(0, 74, 0, 74)
-AvatarRing.Position         = UDim2.new(0.5, -37, 0, 18)
-AvatarRing.BackgroundColor3 = C.Electric
-AvatarRing.BorderSizePixel  = 0
-AvatarRing.ZIndex           = 3
-AvatarRing.Parent           = Sidebar
-Instance.new("UICorner", AvatarRing).CornerRadius = UDim.new(1, 0)
-
--- glow pulse behind ring
-local AvatarGlow = Instance.new("Frame")
-AvatarGlow.Size             = UDim2.new(0, 86, 0, 86)
-AvatarGlow.Position         = UDim2.new(0.5, -43, 0, 12)
-AvatarGlow.BackgroundColor3 = C.Electric
-AvatarGlow.BackgroundTransparency = 0.75
-AvatarGlow.BorderSizePixel  = 0
-AvatarGlow.ZIndex           = 2
-AvatarGlow.Parent           = Sidebar
-Instance.new("UICorner", AvatarGlow).CornerRadius = UDim.new(1, 0)
-
-local AvatarInner = Instance.new("Frame")
-AvatarInner.Size             = UDim2.new(1, -4, 1, -4)
-AvatarInner.Position         = UDim2.new(0, 2, 0, 2)
-AvatarInner.BackgroundColor3 = C.Void
-AvatarInner.BorderSizePixel  = 0
-AvatarInner.ZIndex           = 4
-AvatarInner.Parent           = AvatarRing
-Instance.new("UICorner", AvatarInner).CornerRadius = UDim.new(1, 0)
-
-local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size                = UDim2.new(1, 0, 1, 0)
-AvatarImg.BackgroundTransparency = 1
-AvatarImg.Image               = ""
-AvatarImg.ZIndex              = 5
-AvatarImg.Parent              = AvatarInner
-Instance.new("UICorner", AvatarImg).CornerRadius = UDim.new(1, 0)
-
+-- big avatar
+local AVGlow=Instance.new("Frame") AVGlow.Size=UDim2.new(0,92,0,92) AVGlow.Position=UDim2.new(0.5,-46,0,14)
+AVGlow.BackgroundColor3=C.Electric AVGlow.BackgroundTransparency=0.8 AVGlow.BorderSizePixel=0 AVGlow.ZIndex=2 AVGlow.Parent=SB
+Instance.new("UICorner",AVGlow).CornerRadius=UDim.new(1,0)
+local AVRing=Instance.new("Frame") AVRing.Size=UDim2.new(0,80,0,80) AVRing.Position=UDim2.new(0.5,-40,0,20)
+AVRing.BackgroundColor3=C.Electric AVRing.BorderSizePixel=0 AVRing.ZIndex=3 AVRing.Parent=SB
+Instance.new("UICorner",AVRing).CornerRadius=UDim.new(1,0)
+local AVIn=Instance.new("Frame") AVIn.Size=UDim2.new(1,-4,1,-4) AVIn.Position=UDim2.new(0,2,0,2)
+AVIn.BackgroundColor3=C.Void AVIn.BorderSizePixel=0 AVIn.ZIndex=4 AVIn.Parent=AVRing
+Instance.new("UICorner",AVIn).CornerRadius=UDim.new(1,0)
+local AVImg=Instance.new("ImageLabel") AVImg.Size=UDim2.new(1,0,1,0) AVImg.BackgroundTransparency=1
+AVImg.Image="" AVImg.ZIndex=5 AVImg.Parent=AVIn
+Instance.new("UICorner",AVImg).CornerRadius=UDim.new(1,0)
 task.spawn(function()
-    local ok, img = pcall(function()
-        return Players:GetUserThumbnailAsync(
-            LocalPlayer.UserId,
-            Enum.ThumbnailType.AvatarBust,
-            Enum.ThumbnailSize.Size100x100
-        )
-    end)
-    if ok and img then AvatarImg.Image = img end
+    local ok,img=pcall(function() return Players:GetUserThumbnailAsync(LocalPlayer.UserId,Enum.ThumbnailType.AvatarBust,Enum.ThumbnailSize.Size100x100) end)
+    if ok and img then AVImg.Image=img TAvatarImg.Image=img end
 end)
-
--- pulse glow animation
 task.spawn(function()
-    while AvatarGlow and AvatarGlow.Parent do
-        TweenService:Create(AvatarGlow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            BackgroundTransparency = 0.55
-        }):Play()
-        task.wait(1.6)
-        TweenService:Create(AvatarGlow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            BackgroundTransparency = 0.85
-        }):Play()
-        task.wait(1.6)
+    while AVGlow and AVGlow.Parent do
+        TweenService:Create(AVGlow,TweenInfo.new(1.8,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),{BackgroundTransparency=0.6}):Play()
+        task.wait(1.8)
+        TweenService:Create(AVGlow,TweenInfo.new(1.8,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),{BackgroundTransparency=0.88}):Play()
+        task.wait(1.8)
     end
 end)
 
--- ── Username ──────────────────────────────────────────────────
-local UsernameLbl = Instance.new("TextLabel")
-UsernameLbl.Text                 = LocalPlayer.Name
-UsernameLbl.Font                 = Enum.Font.GothamBold
-UsernameLbl.TextSize             = 12
-UsernameLbl.TextColor3           = C.White
-UsernameLbl.BackgroundTransparency = 1
-UsernameLbl.Size                 = UDim2.new(1, -8, 0, 16)
-UsernameLbl.Position             = UDim2.new(0, 4, 0, 100)
-UsernameLbl.TextXAlignment       = Enum.TextXAlignment.Center
-UsernameLbl.TextWrapped          = true
-UsernameLbl.ZIndex               = 3
-UsernameLbl.Parent               = Sidebar
-
-local AtLbl = Instance.new("TextLabel")
-AtLbl.Text                 = "@" .. LocalPlayer.Name
-AtLbl.Font                 = Enum.Font.Gotham
-AtLbl.TextSize             = 9
-AtLbl.TextColor3           = C.Ghost
-AtLbl.BackgroundTransparency = 1
-AtLbl.Size                 = UDim2.new(1, -8, 0, 13)
-AtLbl.Position             = UDim2.new(0, 4, 0, 118)
-AtLbl.TextXAlignment       = Enum.TextXAlignment.Center
-AtLbl.ZIndex               = 3
-AtLbl.Parent               = Sidebar
-
+-- username
+local UName=Instance.new("TextLabel") UName.Text=LocalPlayer.Name UName.Font=Enum.Font.GothamBold
+UName.TextSize=13 UName.TextColor3=C.White UName.BackgroundTransparency=1
+UName.Size=UDim2.new(1,-10,0,16) UName.Position=UDim2.new(0,5,0,108) UName.TextXAlignment=Enum.TextXAlignment.Center
+UName.ZIndex=3 UName.Parent=SB
+local AtName=Instance.new("TextLabel") AtName.Text="@"..LocalPlayer.Name AtName.Font=Enum.Font.Gotham
+AtName.TextSize=9 AtName.TextColor3=C.Ghost AtName.BackgroundTransparency=1
+AtName.Size=UDim2.new(1,-10,0,12) AtName.Position=UDim2.new(0,5,0,126) AtName.TextXAlignment=Enum.TextXAlignment.Center
+AtName.ZIndex=3 AtName.Parent=SB
 task.spawn(function()
-    local ok, dn = pcall(function() return LocalPlayer.DisplayName end)
-    if ok and dn and dn ~= LocalPlayer.Name then
-        UsernameLbl.Text = dn
-        AtLbl.Text       = "@" .. LocalPlayer.Name
-    else
-        AtLbl.Text = ""
-    end
+    local ok,dn=pcall(function() return LocalPlayer.DisplayName end)
+    if ok and dn and dn~=LocalPlayer.Name then UName.Text=dn AtName.Text="@"..LocalPlayer.Name
+    else AtName.Text="" end
 end)
 
--- ── Info badges ───────────────────────────────────────────────
-local function makeBadge(yPos, icon, text)
-    local f = Instance.new("Frame")
-    f.Size             = UDim2.new(1, -16, 0, 20)
-    f.Position         = UDim2.new(0, 8, 0, yPos)
-    f.BackgroundColor3 = C.NavyMid
-    f.BorderSizePixel  = 0
-    f.ZIndex           = 3
-    f.Parent           = Sidebar
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
-
-    -- left accent bar
-    local bar = Instance.new("Frame")
-    bar.Size             = UDim2.new(0, 2, 1, 0)
-    bar.BackgroundColor3 = C.Electric
-    bar.BorderSizePixel  = 0
-    bar.ZIndex           = 4
-    bar.Parent           = f
-    Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 2)
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Text                 = icon .. "  " .. text
-    lbl.Font                 = Enum.Font.Gotham
-    lbl.TextSize             = 9
-    lbl.TextColor3           = C.Ghost
-    lbl.BackgroundTransparency = 1
-    lbl.Size                 = UDim2.new(1, -8, 1, 0)
-    lbl.Position             = UDim2.new(0, 6, 0, 0)
-    lbl.TextXAlignment       = Enum.TextXAlignment.Left
-    lbl.ZIndex               = 4
-    lbl.Parent               = f
-    return f, lbl
+-- info badges
+local function badge(y,icon,txt)
+    local f=Instance.new("Frame") f.Size=UDim2.new(1,-18,0,22) f.Position=UDim2.new(0,9,0,y)
+    f.BackgroundColor3=C.Navy f.BorderSizePixel=0 f.ZIndex=3 f.Parent=SB
+    Instance.new("UICorner",f).CornerRadius=UDim.new(0,5)
+    local b=Instance.new("Frame") b.Size=UDim2.new(0,2,0.7,0) b.Position=UDim2.new(0,0,0.15,0)
+    b.BackgroundColor3=C.Electric b.BorderSizePixel=0 b.ZIndex=4 b.Parent=f
+    local l=Instance.new("TextLabel") l.Text=icon.."  "..txt l.Font=Enum.Font.Gotham l.TextSize=9
+    l.TextColor3=C.Ghost l.BackgroundTransparency=1 l.Size=UDim2.new(1,-6,1,0) l.Position=UDim2.new(0,6,0,0)
+    l.TextXAlignment=Enum.TextXAlignment.Left l.ZIndex=4 l.Parent=f
+    return f,l
 end
 
-makeBadge(140, "🗓", ("%d days old"):format(getAccountAge()))
-makeBadge(166, "💻", "PC · Full mode")
-local _, statsLblRef = makeBadge(192, "⚡", "-- FPS · --ms")
+badge(148,"🗓",string.format("%d days old",getAge()))
+badge(174,"💻","PC · Full mode")
+local _,SLbl=badge(200,"⚡","-- FPS · --ms")
+badge(H-54-30,"🔧",getExec())
 
--- live FPS/ping
-local fpsHistory = {}
-RunService.RenderStepped:Connect(function(dt)
-    table.insert(fpsHistory, 1/dt)
-    if #fpsHistory > 20 then table.remove(fpsHistory, 1) end
-    local sum = 0
-    for _, v in ipairs(fpsHistory) do sum = sum + v end
-    local fps  = math.floor(sum / #fpsHistory)
-    local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
-    statsLblRef.Text = "⚡  " .. fps .. " FPS · " .. ping .. "ms"
+local fps2={} RunService.RenderStepped:Connect(function(dt)
+    table.insert(fps2,1/dt) if #fps2>20 then table.remove(fps2,1) end
+    local s=0 for _,v in ipairs(fps2) do s=s+v end
+    SLbl.Text="⚡  "..math.floor(s/#fps2).." FPS · "..math.floor(LocalPlayer:GetNetworkPing()*1000).."ms"
 end)
 
--- ── Executor badge at bottom ──────────────────────────────────
-local _, execLbl = makeBadge(ROOT_H - 44 - 30, "🔧", detectExecutor())
-
--- ============================================================
---  CONTENT AREA
--- ============================================================
-
-local ContentArea = Instance.new("Frame")
-ContentArea.Name                  = "ContentArea"
-ContentArea.Size                  = UDim2.new(1, -SIDEBAR_W, 1, -44)
-ContentArea.Position              = UDim2.new(0, SIDEBAR_W, 0, 44)
-ContentArea.BackgroundTransparency = 1
-ContentArea.ZIndex                = 2
-ContentArea.Parent                = ContentRoot
+-- ── Content area ──────────────────────────────────────────────
+local CA=Instance.new("Frame") CA.Size=UDim2.new(1,-160,1,-54) CA.Position=UDim2.new(0,160,0,54)
+CA.BackgroundTransparency=1 CA.ZIndex=2 CA.Parent=CR
 
 -- ── Tab bar ───────────────────────────────────────────────────
-local TabBar = Instance.new("Frame")
-TabBar.Size                 = UDim2.new(1, -20, 0, 28)
-TabBar.Position             = UDim2.new(0, 10, 0, 8)
-TabBar.BackgroundTransparency = 1
-TabBar.ZIndex               = 3
-TabBar.Parent               = ContentArea
+local TabBar=Instance.new("Frame") TabBar.Size=UDim2.new(1,-16,0,32) TabBar.Position=UDim2.new(0,8,0,8)
+TabBar.BackgroundColor3=C.Void TabBar.BorderSizePixel=0 TabBar.ZIndex=3 TabBar.Parent=CA
+Instance.new("UICorner",TabBar).CornerRadius=UDim.new(0,8)
+local TL=Instance.new("UIListLayout") TL.FillDirection=Enum.FillDirection.Horizontal
+TL.SortOrder=Enum.SortOrder.LayoutOrder TL.Padding=UDim.new(0,0) TL.Parent=TabBar
 
-local TabLayout = Instance.new("UIListLayout")
-TabLayout.FillDirection = Enum.FillDirection.Horizontal
-TabLayout.SortOrder     = Enum.SortOrder.LayoutOrder
-TabLayout.Padding       = UDim.new(0, 6)
-TabLayout.Parent        = TabBar
+local tabDefs={
+    {name="Access", icon="🔐"},
+    {name="Guide",  icon="🌐"},
+    {name="Info",   icon="👤"},
+}
+local tabBtns={} local tabPages={} local activeTab="Access"
 
-local tabNames = {"Access", "Guide", "System"}
-local tabBtns  = {}
-local tabPages = {}
-local activeTab = "System"
-
-for i, name in ipairs(tabNames) do
-    local btn = Instance.new("TextButton")
-    btn.Name             = name
-    btn.Text             = name
-    btn.Font             = Enum.Font.Gotham
-    btn.TextSize         = 11
-    btn.BackgroundColor3 = C.NavyMid
-    btn.TextColor3       = C.Ghost
-    btn.BorderSizePixel  = 0
-    btn.Size             = UDim2.new(0, 78, 1, 0)
-    btn.LayoutOrder      = i
-    btn.ZIndex           = 3
-    btn.Parent           = TabBar
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-    tabBtns[name] = btn
-
-    btn.MouseEnter:Connect(function()
-        if activeTab ~= name then
-            TweenService:Create(btn, TweenInfo.new(0.15), {TextColor3=C.Blowout}):Play()
-        end
-    end)
-    btn.MouseLeave:Connect(function()
-        if activeTab ~= name then
-            TweenService:Create(btn, TweenInfo.new(0.15), {TextColor3=C.Ghost}):Play()
-        end
-    end)
+for i,td in ipairs(tabDefs) do
+    local btn=Instance.new("TextButton") btn.Name=td.name btn.Text=td.icon.."  "..td.name
+    btn.Font=Enum.Font.Gotham btn.TextSize=11 btn.TextColor3=C.Ghost
+    btn.BackgroundColor3=C.Void btn.BorderSizePixel=0
+    btn.Size=UDim2.new(0,148,1,0) btn.LayoutOrder=i btn.ZIndex=3 btn.Parent=TabBar
+    local corner=Instance.new("UICorner") corner.CornerRadius=UDim.new(0,8) corner.Parent=btn
+    tabBtns[td.name]=btn
+    btn.MouseEnter:Connect(function() if activeTab~=td.name then TweenService:Create(btn,TweenInfo.new(0.12),{TextColor3=C.White}):Play() end end)
+    btn.MouseLeave:Connect(function() if activeTab~=td.name then TweenService:Create(btn,TweenInfo.new(0.12),{TextColor3=C.Ghost}):Play() end end)
 end
 
--- ── Page container ────────────────────────────────────────────
-local PageContainer = Instance.new("Frame")
-PageContainer.Size                = UDim2.new(1, -20, 1, -46)
-PageContainer.Position            = UDim2.new(0, 10, 0, 42)
-PageContainer.BackgroundTransparency = 1
-PageContainer.ZIndex              = 2
-PageContainer.Parent              = ContentArea
+local PC=Instance.new("Frame") PC.Size=UDim2.new(1,-16,1,-50) PC.Position=UDim2.new(0,8,0,46)
+PC.BackgroundTransparency=1 PC.ZIndex=2 PC.Parent=CA
 
-local function makePage(name)
-    local p = Instance.new("Frame")
-    p.Name             = name
-    p.Size             = UDim2.new(1, 0, 1, 0)
-    p.BackgroundColor3 = C.Surface
-    p.BorderSizePixel  = 0
-    p.Visible          = false
-    p.ZIndex           = 2
-    p.Parent           = PageContainer
-    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 8)
-    tabPages[name] = p
-    return p
+local function makePage(n)
+    local p=Instance.new("Frame") p.Name=n p.Size=UDim2.new(1,0,1,0)
+    p.BackgroundColor3=C.Surface p.BorderSizePixel=0 p.Visible=false p.ZIndex=2 p.Parent=PC
+    Instance.new("UICorner",p).CornerRadius=UDim.new(0,10)
+    tabPages[n]=p return p
 end
 
--- shared button factory
-local function makeBtn(parent, text, yPos, accent)
-    local btn = Instance.new("TextButton")
-    btn.Text             = text
-    btn.Font             = accent and Enum.Font.GothamBold or Enum.Font.Gotham
-    btn.TextSize         = accent and 13 or 11
-    btn.TextColor3       = accent and C.White or C.Ghost
-    btn.BackgroundColor3 = accent and C.Electric or C.NavyMid
-    btn.BorderSizePixel  = 0
-    btn.Size             = UDim2.new(1, -20, 0, accent and 34 or 28)
-    btn.Position         = UDim2.new(0, 10, 0, yPos)
-    btn.ZIndex           = 3
-    btn.Parent           = parent
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
-    -- left accent bar on secondary buttons
-    if not accent then
-        local bar = Instance.new("Frame")
-        bar.Size             = UDim2.new(0, 2, 0.6, 0)
-        bar.Position         = UDim2.new(0, 0, 0.2, 0)
-        bar.BackgroundColor3 = C.Electric
-        bar.BorderSizePixel  = 0
-        bar.ZIndex           = 4
-        bar.Parent           = btn
-        Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 2)
+local function switchTab(n)
+    activeTab=n
+    for tn,pg in pairs(tabPages) do pg.Visible=(tn==n) end
+    for tn,btn in pairs(tabBtns) do
+        local on=(tn==n)
+        btn.TextColor3=on and C.White or C.Ghost
+        btn.BackgroundColor3=on and C.Electric or C.Void
     end
+end
 
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {
-            BackgroundColor3 = accent and C.Glitch or C.BlueEdge
-        }):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {
-            BackgroundColor3 = accent and C.Electric or C.NavyMid
-        }):Play()
-    end)
+-- shared card factory
+local function card(parent,y,h)
+    local f=Instance.new("Frame") f.Size=UDim2.new(1,-20,0,h) f.Position=UDim2.new(0,10,0,y)
+    f.BackgroundColor3=C.Card f.BorderSizePixel=0 f.ZIndex=3 f.Parent=parent
+    Instance.new("UICorner",f).CornerRadius=UDim.new(0,8)
+    return f
+end
+
+local function accentBtn(parent,text,y,h,primary)
+    local btn=Instance.new("TextButton") btn.Text=text
+    btn.Font=primary and Enum.Font.GothamBold or Enum.Font.Gotham
+    btn.TextSize=primary and 12 or 11
+    btn.TextColor3=primary and C.White or C.Ghost
+    btn.BackgroundColor3=primary and C.Electric or C.Navy
+    btn.BorderSizePixel=0 btn.Size=UDim2.new(1,-20,0,h or 32)
+    btn.Position=UDim2.new(0,10,0,y) btn.ZIndex=3 btn.Parent=parent
+    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,7)
+    if not primary then
+        local b=Instance.new("Frame") b.Size=UDim2.new(0,2,0.6,0) b.Position=UDim2.new(0,0,0.2,0)
+        b.BackgroundColor3=C.Electric b.BorderSizePixel=0 b.ZIndex=4 b.Parent=btn
+        Instance.new("UICorner",b).CornerRadius=UDim.new(0,2)
+    end
+    btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.12),{BackgroundColor3=primary and C.Glitch or C.Edge}):Play() end)
+    btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.12),{BackgroundColor3=primary and C.Electric or C.Navy}):Play() end)
     return btn
 end
 
@@ -628,400 +329,337 @@ end
 --  ACCESS PAGE
 -- ============================================================
 
-local accessPage = makePage("Access")
+local AP=makePage("Access")
 
--- step strip
-local stepStrip = Instance.new("Frame")
-stepStrip.Size             = UDim2.new(1, -20, 0, 24)
-stepStrip.Position         = UDim2.new(0, 10, 0, 10)
-stepStrip.BackgroundColor3 = C.Void
-stepStrip.BorderSizePixel  = 0
-stepStrip.ZIndex           = 3
-stepStrip.Parent           = accessPage
-Instance.new("UICorner", stepStrip).CornerRadius = UDim.new(0, 5)
+-- Access Locked card
+local lockCard=card(AP,10,58)
+local lockBarL=Instance.new("Frame") lockBarL.Size=UDim2.new(0,3,1,0) lockBarL.BackgroundColor3=C.Fail
+lockBarL.BorderSizePixel=0 lockBarL.ZIndex=4 lockBarL.Parent=lockCard
+Instance.new("UICorner",lockBarL).CornerRadius=UDim.new(0,3)
 
--- thin top line
-local stripLine = Instance.new("Frame")
-stripLine.Size             = UDim2.new(1, 0, 0, 1)
-stripLine.BackgroundColor3 = C.BlueEdge
-stripLine.BorderSizePixel  = 0
-stripLine.ZIndex           = 4
-stripLine.Parent           = stepStrip
+local lockIcon=Instance.new("TextLabel") lockIcon.Text="🔒" lockIcon.Font=Enum.Font.GothamBold
+lockIcon.TextSize=20 lockIcon.BackgroundTransparency=1 lockIcon.Size=UDim2.new(0,36,1,0)
+lockIcon.Position=UDim2.new(0,4,0,0) lockIcon.TextXAlignment=Enum.TextXAlignment.Center lockIcon.ZIndex=4 lockIcon.Parent=lockCard
 
-local stepLayout2 = Instance.new("UIListLayout")
-stepLayout2.FillDirection = Enum.FillDirection.Horizontal
-stepLayout2.SortOrder     = Enum.SortOrder.LayoutOrder
-stepLayout2.Parent        = stepStrip
+local lockTitle=Instance.new("TextLabel") lockTitle.Text="Access Locked"
+lockTitle.Font=Enum.Font.GothamBold lockTitle.TextSize=14 lockTitle.TextColor3=C.White
+lockTitle.BackgroundTransparency=1 lockTitle.Size=UDim2.new(1,-90,0,22)
+lockTitle.Position=UDim2.new(0,44,0,8) lockTitle.TextXAlignment=Enum.TextXAlignment.Left lockTitle.ZIndex=4 lockTitle.Parent=lockCard
 
-local stepElems = {}
-for i, s in ipairs({"① Copy link", "② Join group", "③ Verify"}) do
-    local seg = Instance.new("TextLabel")
-    seg.Text                 = s
-    seg.Font                 = Enum.Font.Gotham
-    seg.TextSize             = 10
-    seg.TextColor3           = i==1 and C.Electric or C.Ghost
-    seg.BackgroundTransparency = 1
-    seg.Size                 = UDim2.new(0, 120, 1, 0)
-    seg.TextXAlignment       = Enum.TextXAlignment.Center
-    seg.LayoutOrder          = i
-    seg.ZIndex               = 4
-    seg.Parent               = stepStrip
-    stepElems[i] = seg
+local lockSub=Instance.new("TextLabel") lockSub.Text="Join the VOID HUB group to get free access and prevent bot raids."
+lockSub.Font=Enum.Font.Gotham lockSub.TextSize=9 lockSub.TextColor3=C.Ghost
+lockSub.BackgroundTransparency=1 lockSub.Size=UDim2.new(1,-54,0,22)
+lockSub.Position=UDim2.new(0,44,0,30) lockSub.TextXAlignment=Enum.TextXAlignment.Left
+lockSub.TextWrapped=true lockSub.ZIndex=4 lockSub.Parent=lockCard
+
+-- toggle pill
+local pill=Instance.new("Frame") pill.Size=UDim2.new(0,32,0,18) pill.Position=UDim2.new(1,-42,0.5,-9)
+pill.BackgroundColor3=C.Edge pill.BorderSizePixel=0 pill.ZIndex=4 pill.Parent=lockCard
+Instance.new("UICorner",pill).CornerRadius=UDim.new(1,0)
+local pillThumb=Instance.new("Frame") pillThumb.Size=UDim2.new(0,14,0,14) pillThumb.Position=UDim2.new(0,2,0.5,-7)
+pillThumb.BackgroundColor3=C.Ghost pillThumb.BorderSizePixel=0 pillThumb.ZIndex=5 pillThumb.Parent=pill
+Instance.new("UICorner",pillThumb).CornerRadius=UDim.new(1,0)
+
+-- Group card
+local grpCard=card(AP,76,56)
+-- group logo circle
+local grpCircle=Instance.new("Frame") grpCircle.Size=UDim2.new(0,38,0,38) grpCircle.Position=UDim2.new(0,10,0.5,-19)
+grpCircle.BackgroundColor3=C.Electric grpCircle.BorderSizePixel=0 grpCircle.ZIndex=4 grpCircle.Parent=grpCard
+Instance.new("UICorner",grpCircle).CornerRadius=UDim.new(1,0)
+local grpInner=Instance.new("Frame") grpInner.Size=UDim2.new(1,-2,1,-2) grpInner.Position=UDim2.new(0,1,0,1)
+grpInner.BackgroundTransparency=1 grpInner.BorderSizePixel=0 grpInner.ZIndex=5 grpInner.Parent=grpCircle
+Instance.new("UICorner",grpInner).CornerRadius=UDim.new(1,0)
+local grpImg=Instance.new("ImageLabel")
+grpImg.Image=""
+grpImg.Size=UDim2.new(1,0,1,0) grpImg.BackgroundTransparency=1
+grpImg.ScaleType=Enum.ScaleType.Crop grpImg.ZIndex=6 grpImg.Parent=grpInner
+Instance.new("UICorner",grpImg).CornerRadius=UDim.new(1,0)
+
+-- fetch group icon — works on all executors
+task.spawn(function()
+    local ok, icon = pcall(function()
+        local gs = game:GetService("GroupService")
+        local info = gs:GetGroupInfoAsync(465621544)
+        return info and info.EmblemUrl or nil
+    end)
+    if ok and icon and icon ~= "" then
+        grpImg.Image = icon
+    else
+        -- fallback: rbxthumb
+        grpImg.Image = "rbxthumb://type=Group&id=465621544&w=150&h=150"
+    end
+end)
+
+local grpName=Instance.new("TextLabel") grpName.Text="VOID HUB" grpName.Font=Enum.Font.GothamBold
+grpName.TextSize=13 grpName.TextColor3=C.White grpName.BackgroundTransparency=1
+grpName.Size=UDim2.new(1,-120,0,18) grpName.Position=UDim2.new(0,56,0,8)
+grpName.TextXAlignment=Enum.TextXAlignment.Left grpName.ZIndex=4 grpName.Parent=grpCard
+
+local grpSub=Instance.new("TextLabel") grpSub.Text="Official group  ·  tap Copy to get the link"
+grpSub.Font=Enum.Font.Gotham grpSub.TextSize=9 grpSub.TextColor3=C.Ghost grpSub.BackgroundTransparency=1
+grpSub.Size=UDim2.new(1,-120,0,14) grpSub.Position=UDim2.new(0,56,0,30)
+grpSub.TextXAlignment=Enum.TextXAlignment.Left grpSub.ZIndex=4 grpSub.Parent=grpCard
+
+-- copy button inside group card
+local copyGrpBtn=Instance.new("TextButton") copyGrpBtn.Text="⧉  Copy"
+copyGrpBtn.Font=Enum.Font.GothamBold copyGrpBtn.TextSize=11 copyGrpBtn.TextColor3=C.White
+copyGrpBtn.BackgroundColor3=C.Electric copyGrpBtn.BorderSizePixel=0
+copyGrpBtn.Size=UDim2.new(0,70,0,30) copyGrpBtn.Position=UDim2.new(1,-80,0.5,-15)
+copyGrpBtn.ZIndex=4 copyGrpBtn.Parent=grpCard
+Instance.new("UICorner",copyGrpBtn).CornerRadius=UDim.new(0,7)
+copyGrpBtn.MouseEnter:Connect(function() TweenService:Create(copyGrpBtn,TweenInfo.new(0.12),{BackgroundColor3=C.Glitch}):Play() end)
+copyGrpBtn.MouseLeave:Connect(function() TweenService:Create(copyGrpBtn,TweenInfo.new(0.12),{BackgroundColor3=C.Electric}):Play() end)
+
+-- Progress section
+local progHeader=Instance.new("Frame") progHeader.Size=UDim2.new(1,-20,0,20) progHeader.Position=UDim2.new(0,10,0,140)
+progHeader.BackgroundTransparency=1 progHeader.ZIndex=3 progHeader.Parent=AP
+local progLbl=Instance.new("TextLabel") progLbl.Text="Your progress" progLbl.Font=Enum.Font.GothamBold
+progLbl.TextSize=12 progLbl.TextColor3=C.White progLbl.BackgroundTransparency=1
+progLbl.Size=UDim2.new(0.6,0,1,0) progLbl.TextXAlignment=Enum.TextXAlignment.Left progLbl.ZIndex=4 progLbl.Parent=progHeader
+local progPct=Instance.new("TextLabel") progPct.Text="0%" progPct.Font=Enum.Font.GothamBold
+progPct.TextSize=12 progPct.TextColor3=C.Glitch progPct.BackgroundTransparency=1
+progPct.Size=UDim2.new(0.4,0,1,0) progPct.Position=UDim2.new(0.6,0,0,0)
+progPct.TextXAlignment=Enum.TextXAlignment.Right progPct.ZIndex=4 progPct.Parent=progHeader
+
+-- progress bar track
+local progTrack=Instance.new("Frame") progTrack.Size=UDim2.new(1,-20,0,4) progTrack.Position=UDim2.new(0,10,0,164)
+progTrack.BackgroundColor3=C.Navy progTrack.BorderSizePixel=0 progTrack.ZIndex=3 progTrack.Parent=AP
+Instance.new("UICorner",progTrack).CornerRadius=UDim.new(1,0)
+local progFill=Instance.new("Frame") progFill.Size=UDim2.new(0,0,1,0) progFill.BackgroundColor3=C.Electric
+progFill.BorderSizePixel=0 progFill.ZIndex=4 progFill.Parent=progTrack
+Instance.new("UICorner",progFill).CornerRadius=UDim.new(1,0)
+
+-- step rows
+local stepFrame=Instance.new("Frame") stepFrame.Size=UDim2.new(1,-20,0,100) stepFrame.Position=UDim2.new(0,10,0,174)
+stepFrame.BackgroundTransparency=1 stepFrame.ZIndex=3 stepFrame.Parent=AP
+local SFL=Instance.new("UIListLayout") SFL.SortOrder=Enum.SortOrder.LayoutOrder SFL.Padding=UDim.new(0,4) SFL.Parent=stepFrame
+
+local _ageLabel=string.format("Account age verified (%d days)",getAge())
+local stepDefs={
+    {label=_ageLabel,              done=getAge()>=HUB.MinAge},
+    {label="Copy the group link",  done=false},
+    {label="Join group in browser",done=false},
+    {label="Verify & get access",  done=false},
+}
+local stepRows={}
+
+for i,sd in ipairs(stepDefs) do
+    local row=Instance.new("Frame") row.Size=UDim2.new(1,0,0,22) row.BackgroundTransparency=1
+    row.LayoutOrder=i row.ZIndex=3 row.Parent=stepFrame
+
+    local circ=Instance.new("Frame") circ.Size=UDim2.new(0,20,0,20) circ.Position=UDim2.new(0,0,0.5,-10)
+    circ.BackgroundColor3=sd.done and C.Success or C.Navy circ.BorderSizePixel=0 circ.ZIndex=4 circ.Parent=row
+    Instance.new("UICorner",circ).CornerRadius=UDim.new(1,0)
+
+    local num=Instance.new("TextLabel") num.Text=sd.done and "✓" or tostring(i)
+    num.Font=Enum.Font.GothamBold num.TextSize=9 num.TextColor3=sd.done and C.White or C.Dim
+    num.BackgroundTransparency=1 num.Size=UDim2.new(1,0,1,0) num.TextXAlignment=Enum.TextXAlignment.Center
+    num.ZIndex=5 num.Parent=circ
+
+    local lbl=Instance.new("TextLabel") lbl.Text=sd.label
+    lbl.Font=sd.done and Enum.Font.GothamBold or Enum.Font.Gotham lbl.TextSize=11
+    lbl.TextColor3=sd.done and C.White or C.Ghost lbl.BackgroundTransparency=1
+    lbl.Size=UDim2.new(1,-28,1,0) lbl.Position=UDim2.new(0,26,0,0)
+    lbl.TextXAlignment=Enum.TextXAlignment.Left lbl.ZIndex=4 lbl.Parent=row
+
+    stepRows[i]={circ=circ,num=num,lbl=lbl}
 end
 
-local function setStep(n)
-    for i, seg in ipairs(stepElems) do
-        seg.TextColor3 = (i==n) and C.Electric or (i<n) and C.Success or C.Ghost
+local function updateProgress(n)
+    local pct=math.floor((n/#stepDefs)*100)
+    progPct.Text=pct.."%"
+    TweenService:Create(progFill,TweenInfo.new(0.4,Enum.EasingStyle.Quad),{Size=UDim2.new(n/#stepDefs,0,1,0)}):Play()
+    for i,r in ipairs(stepRows) do
+        local done=i<=n
+        TweenService:Create(r.circ,TweenInfo.new(0.2),{BackgroundColor3=done and C.Success or C.Navy}):Play()
+        r.num.TextColor3=done and C.White or C.Dim
+        r.num.Text=done and "✓" or tostring(i)
+        r.lbl.TextColor3=done and C.White or C.Ghost
+        r.lbl.Font=done and Enum.Font.GothamBold or Enum.Font.Gotham
     end
 end
 
--- desc
-local accDesc = Instance.new("TextLabel")
-accDesc.Text                 = "Access is free — join the group to unlock VOID HUB."
-accDesc.Font                 = Enum.Font.Gotham
-accDesc.TextSize             = 10
-accDesc.TextColor3           = C.Ghost
-accDesc.BackgroundTransparency = 1
-accDesc.Size                 = UDim2.new(1, -20, 0, 24)
-accDesc.Position             = UDim2.new(0, 10, 0, 42)
-accDesc.TextXAlignment       = Enum.TextXAlignment.Left
-accDesc.TextWrapped          = true
-accDesc.ZIndex               = 3
-accDesc.Parent               = accessPage
+updateProgress(getAge()>=HUB.MinAge and 1 or 0)
 
--- status box
-local statusBox = Instance.new("Frame")
-statusBox.Size             = UDim2.new(1, -20, 0, 48)
-statusBox.Position         = UDim2.new(0, 10, 0, 72)
-statusBox.BackgroundColor3 = C.Void
-statusBox.BorderSizePixel  = 0
-statusBox.ZIndex           = 3
-statusBox.Parent           = accessPage
-Instance.new("UICorner", statusBox).CornerRadius = UDim.new(0, 6)
+-- verify button
+local verifyBtn=accentBtn(AP,"↺  I joined — verify access",282,30,false)
 
--- left color bar
-local statusBar = Instance.new("Frame")
-statusBar.Size             = UDim2.new(0, 3, 1, 0)
-statusBar.BackgroundColor3 = C.Fail
-statusBar.BorderSizePixel  = 0
-statusBar.ZIndex           = 4
-statusBar.Parent           = statusBox
-Instance.new("UICorner", statusBar).CornerRadius = UDim.new(0, 3)
+-- discord
+local discLbl=Instance.new("TextLabel") discLbl.Text="discord: "..HUB.Discord discLbl.Font=Enum.Font.Gotham
+discLbl.TextSize=9 discLbl.TextColor3=C.Dim discLbl.BackgroundTransparency=1
+discLbl.Size=UDim2.new(1,-20,0,12) discLbl.Position=UDim2.new(0,10,1,-16)
+discLbl.TextXAlignment=Enum.TextXAlignment.Left discLbl.ZIndex=3 discLbl.Parent=AP
 
-local statusIcon = Instance.new("TextLabel")
-statusIcon.Text                 = "✗"
-statusIcon.Font                 = Enum.Font.GothamBold
-statusIcon.TextSize             = 18
-statusIcon.TextColor3           = C.Fail
-statusIcon.BackgroundTransparency = 1
-statusIcon.Size                 = UDim2.new(0, 36, 1, 0)
-statusIcon.Position             = UDim2.new(0, 4, 0, 0)
-statusIcon.TextXAlignment       = Enum.TextXAlignment.Center
-statusIcon.ZIndex               = 4
-statusIcon.Parent               = statusBox
-
-local statusText = Instance.new("TextLabel")
-statusText.Text                 = "Not in group"
-statusText.Font                 = Enum.Font.GothamBold
-statusText.TextSize             = 12
-statusText.TextColor3           = C.White
-statusText.BackgroundTransparency = 1
-statusText.Size                 = UDim2.new(1, -48, 0, 20)
-statusText.Position             = UDim2.new(0, 44, 0, 6)
-statusText.TextXAlignment       = Enum.TextXAlignment.Left
-statusText.ZIndex               = 4
-statusText.Parent               = statusBox
-
-local statusSub = Instance.new("TextLabel")
-statusSub.Text                 = "Copy the group link below and join to get access."
-statusSub.Font                 = Enum.Font.Gotham
-statusSub.TextSize             = 9
-statusSub.TextColor3           = C.Ghost
-statusSub.BackgroundTransparency = 1
-statusSub.Size                 = UDim2.new(1, -48, 0, 14)
-statusSub.Position             = UDim2.new(0, 44, 0, 28)
-statusSub.TextXAlignment       = Enum.TextXAlignment.Left
-statusSub.TextWrapped          = true
-statusSub.ZIndex               = 4
-statusSub.Parent               = statusBox
-
-local copyGrpBtn = makeBtn(accessPage, "🔗  Copy Group Link", 132, true)
-local verifyBtn  = makeBtn(accessPage, "↺  I joined — verify access", 174, false)
-
-local function applyGroupGranted()
-    statusBar.BackgroundColor3  = C.Success
-    statusIcon.Text             = "✓"
-    statusIcon.TextColor3       = C.Success
-    statusText.Text             = "Access granted!"
-    statusSub.Text              = "You are a member. VOID HUB is fully unlocked."
-    statusSub.TextColor3        = C.Success
-    verifyBtn.Text              = "✓  Verified — you're in!"
-    verifyBtn.BackgroundColor3  = C.Success
-    copyGrpBtn.Visible          = false
-    setStep(3)
+local function applyGranted()
+    lockBarL.BackgroundColor3=C.Success
+    lockIcon.Text="✓"
+    lockTitle.Text="Access Granted"
+    lockSub.Text="You are a member of VOID HUB. All features unlocked."
+    TweenService:Create(pill,TweenInfo.new(0.2),{BackgroundColor3=C.Success}):Play()
+    TweenService:Create(pillThumb,TweenInfo.new(0.2),{Position=UDim2.new(1,-16,0.5,-7)}):Play()
+    updateProgress(#stepDefs)
+    copyGrpBtn.Text="✓ Done" copyGrpBtn.BackgroundColor3=C.Success
+    verifyBtn.Text="✓  Verified — you're in!" verifyBtn.BackgroundColor3=C.Success verifyBtn.TextColor3=C.White
 end
 
 copyGrpBtn.MouseButton1Click:Connect(function()
     copyToClipboard(HUB.GROUP_URL)
-    copyGrpBtn.Text             = "✓  Copied! Paste in your browser"
-    setStep(2)
-    task.delay(2.5, function() copyGrpBtn.Text = "🔗  Copy Group Link" end)
+    copyGrpBtn.Text="✓ Copied!"
+    copyGrpBtn.BackgroundColor3=C.Success
+    updateProgress(getAge()>=HUB.MinAge and 2 or 1)
+    task.delay(2,function()
+        if copyGrpBtn.Text=="✓ Copied!" then
+            copyGrpBtn.Text="⧉  Copy" copyGrpBtn.BackgroundColor3=C.Electric
+        end
+    end)
 end)
 
 verifyBtn.MouseButton1Click:Connect(function()
-    verifyBtn.Text = "Checking..."
-    setStep(3)
+    verifyBtn.Text="Checking..."
     task.spawn(function()
-        if checkGroup() then
-            applyGroupGranted()
-            renderChecks(buildChecks())
+        if inGroup() then
+            applyGranted()
         else
-            statusText.Text            = "Not in group"
-            statusSub.Text             = "Join the group first, then click verify."
-            statusSub.TextColor3       = C.Ghost
-            verifyBtn.Text             = "✗  Not detected — try again"
-            verifyBtn.BackgroundColor3 = C.Fail
-            setStep(1)
-            task.delay(2, function()
-                verifyBtn.Text             = "↺  I joined — verify access"
-                verifyBtn.BackgroundColor3 = C.NavyMid
+            verifyBtn.Text="✗  Not detected — try again"
+            verifyBtn.BackgroundColor3=C.Fail verifyBtn.TextColor3=C.White
+            task.delay(2,function()
+                verifyBtn.Text="↺  I joined — verify access"
+                verifyBtn.BackgroundColor3=C.Navy verifyBtn.TextColor3=C.Ghost
             end)
         end
     end)
 end)
 
-local accDisc = Instance.new("TextLabel")
-accDisc.Text                 = "discord: " .. HUB.Discord
-accDisc.Font                 = Enum.Font.Gotham
-accDisc.TextSize             = 9
-accDisc.TextColor3           = C.Ghost
-accDisc.BackgroundTransparency = 1
-accDisc.Size                 = UDim2.new(1, -20, 0, 12)
-accDisc.Position             = UDim2.new(0, 10, 1, -16)
-accDisc.TextXAlignment       = Enum.TextXAlignment.Left
-accDisc.ZIndex               = 3
-accDisc.Parent               = accessPage
-
-task.spawn(function()
-    if checkGroup() then applyGroupGranted() end
-end)
+task.spawn(function() if inGroup() then applyGranted() end end)
 
 -- ============================================================
 --  GUIDE PAGE
 -- ============================================================
 
-local guidePage = makePage("Guide")
+local GP=makePage("Guide")
 
-local guideTitle = Instance.new("TextLabel")
-guideTitle.Text                 = "Quick Guide"
-guideTitle.Font                 = Enum.Font.GothamBold
-guideTitle.TextSize             = 13
-guideTitle.TextColor3           = C.White
-guideTitle.BackgroundTransparency = 1
-guideTitle.Size                 = UDim2.new(1, -20, 0, 20)
-guideTitle.Position             = UDim2.new(0, 10, 0, 10)
-guideTitle.TextXAlignment       = Enum.TextXAlignment.Left
-guideTitle.ZIndex               = 3
-guideTitle.Parent               = guidePage
+local gtitle=Instance.new("TextLabel") gtitle.Text="Quick Guide" gtitle.Font=Enum.Font.GothamBold
+gtitle.TextSize=14 gtitle.TextColor3=C.White gtitle.BackgroundTransparency=1
+gtitle.Size=UDim2.new(1,-20,0,22) gtitle.Position=UDim2.new(0,10,0,10)
+gtitle.TextXAlignment=Enum.TextXAlignment.Left gtitle.ZIndex=3 gtitle.Parent=GP
 
-local guideSep = Instance.new("Frame")
-guideSep.Size             = UDim2.new(1, -20, 0, 1)
-guideSep.Position         = UDim2.new(0, 10, 0, 34)
-guideSep.BackgroundColor3 = C.BlueEdge
-guideSep.BorderSizePixel  = 0
-guideSep.ZIndex           = 3
-guideSep.Parent           = guidePage
+local gsep=Instance.new("Frame") gsep.Size=UDim2.new(1,-20,0,1) gsep.Position=UDim2.new(0,10,0,36)
+gsep.BackgroundColor3=C.Edge gsep.BorderSizePixel=0 gsep.ZIndex=3 gsep.Parent=GP
 
-local guideLbl = Instance.new("TextLabel")
-guideLbl.Text = "1.  Attach your executor before injecting.\n" ..
-                "2.  Go to Access tab → Copy Group Link.\n" ..
-                "3.  Paste into browser and join the group.\n" ..
-                "4.  Click \"I joined — verify access\".\n" ..
-                "5.  Green = unlocked. Scripts load automatically.\n\n" ..
-                "Executors:\nSynapse X · KRNL · Script-Ware · Fluxus\n" ..
-                "Evon · Arceus X · Delta · Hydrogen · AWP\n\n" ..
-                "discord: " .. HUB.Discord
-guideLbl.Font                 = Enum.Font.Gotham
-guideLbl.TextSize             = 11
-guideLbl.TextColor3           = C.Ghost
-guideLbl.BackgroundTransparency = 1
-guideLbl.Size                 = UDim2.new(1, -20, 1, -50)
-guideLbl.Position             = UDim2.new(0, 10, 0, 42)
-guideLbl.TextXAlignment       = Enum.TextXAlignment.Left
-guideLbl.TextYAlignment       = Enum.TextYAlignment.Top
-guideLbl.TextWrapped          = true
-guideLbl.ZIndex               = 3
-guideLbl.Parent               = guidePage
+local guideSteps={
+    {"🔌","Attach your executor before injecting."},
+    {"🔐","Go to the Access tab."},
+    {"🔗","Click Copy on the VOID HUB group card."},
+    {"🌐","Paste the link in your browser and join."},
+    {"✅","Click 'I joined — verify access'."},
+    {"🚀","Green = unlocked. Scripts load automatically."},
+}
+
+for i,gs in ipairs(guideSteps) do
+    local row=card(GP,36+(i-1)*38,32)
+    local ic=Instance.new("TextLabel") ic.Text=gs[1] ic.Font=Enum.Font.Gotham ic.TextSize=14
+    ic.BackgroundTransparency=1 ic.Size=UDim2.new(0,30,1,0) ic.Position=UDim2.new(0,6,0,0)
+    ic.TextXAlignment=Enum.TextXAlignment.Center ic.ZIndex=4 ic.Parent=row
+    local tx=Instance.new("TextLabel") tx.Text=gs[2] tx.Font=Enum.Font.Gotham tx.TextSize=11
+    tx.TextColor3=C.Ghost tx.BackgroundTransparency=1 tx.Size=UDim2.new(1,-44,1,0)
+    tx.Position=UDim2.new(0,38,0,0) tx.TextXAlignment=Enum.TextXAlignment.Left
+    tx.TextWrapped=true tx.ZIndex=4 tx.Parent=row
+end
+
+local execCard=card(GP,36+#guideSteps*38,30)
+local execLbl=Instance.new("TextLabel")
+execLbl.Text="Synapse X · KRNL · Script-Ware · Fluxus · Evon · Arceus X · Delta · Hydrogen · AWP"
+execLbl.Font=Enum.Font.Gotham execLbl.TextSize=9 execLbl.TextColor3=C.Dim execLbl.BackgroundTransparency=1
+execLbl.Size=UDim2.new(1,-16,1,0) execLbl.Position=UDim2.new(0,8,0,0)
+execLbl.TextXAlignment=Enum.TextXAlignment.Left execLbl.TextWrapped=true execLbl.ZIndex=4 execLbl.Parent=execCard
 
 -- ============================================================
---  SYSTEM PAGE
+--  INFO PAGE  (was System)
 -- ============================================================
 
-local systemPage = makePage("System")
+local IP=makePage("Info")
 
-local sysTitle = Instance.new("TextLabel")
-sysTitle.Text                 = "Live checks"
-sysTitle.Font                 = Enum.Font.GothamBold
-sysTitle.TextSize             = 13
-sysTitle.TextColor3           = C.White
-sysTitle.BackgroundTransparency = 1
-sysTitle.Size                 = UDim2.new(1, -20, 0, 20)
-sysTitle.Position             = UDim2.new(0, 10, 0, 10)
-sysTitle.TextXAlignment       = Enum.TextXAlignment.Left
-sysTitle.ZIndex               = 3
-sysTitle.Parent               = systemPage
+local ititle=Instance.new("TextLabel") ititle.Text="Live checks" ititle.Font=Enum.Font.GothamBold
+ititle.TextSize=14 ititle.TextColor3=C.White ititle.BackgroundTransparency=1
+ititle.Size=UDim2.new(1,-20,0,22) ititle.Position=UDim2.new(0,10,0,10)
+ititle.TextXAlignment=Enum.TextXAlignment.Left ititle.ZIndex=3 ititle.Parent=IP
 
-local sysSep = Instance.new("Frame")
-sysSep.Size             = UDim2.new(1, -20, 0, 1)
-sysSep.Position         = UDim2.new(0, 10, 0, 34)
-sysSep.BackgroundColor3 = C.BlueEdge
-sysSep.BorderSizePixel  = 0
-sysSep.ZIndex           = 3
-sysSep.Parent           = systemPage
+local isep=Instance.new("Frame") isep.Size=UDim2.new(1,-20,0,1) isep.Position=UDim2.new(0,10,0,36)
+isep.BackgroundColor3=C.Edge isep.BorderSizePixel=0 isep.ZIndex=3 isep.Parent=IP
 
-local checkList = Instance.new("Frame")
-checkList.Size                = UDim2.new(1, -20, 0, 148)
-checkList.Position            = UDim2.new(0, 10, 0, 42)
-checkList.BackgroundTransparency = 1
-checkList.ClipsDescendants    = true
-checkList.ZIndex              = 3
-checkList.Parent              = systemPage
-
-local listLayout = Instance.new("UIListLayout")
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.Padding   = UDim.new(0, 3)
-listLayout.Parent    = checkList
+local checkList=Instance.new("Frame") checkList.Size=UDim2.new(1,-20,0,148) checkList.Position=UDim2.new(0,10,0,44)
+checkList.BackgroundTransparency=1 checkList.ClipsDescendants=true checkList.ZIndex=3 checkList.Parent=IP
+local CLL=Instance.new("UIListLayout") CLL.SortOrder=Enum.SortOrder.LayoutOrder CLL.Padding=UDim.new(0,4) CLL.Parent=checkList
 
 function renderChecks(checks)
-    for _, child in ipairs(checkList:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
-    end
-    for i, chk in ipairs(checks) do
-        local row = Instance.new("Frame")
-        row.Size                   = UDim2.new(1, 0, 0, 20)
-        row.BackgroundColor3       = C.Void
-        row.BorderSizePixel        = 0
-        row.LayoutOrder            = i
-        row.ZIndex                 = 3
-        row.Parent                 = checkList
-        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 4)
-
-        local rowBar = Instance.new("Frame")
-        rowBar.Size             = UDim2.new(0, 2, 0.6, 0)
-        rowBar.Position         = UDim2.new(0, 0, 0.2, 0)
-        rowBar.BackgroundColor3 = chk.passed and C.Success or C.Fail
-        rowBar.BorderSizePixel  = 0
-        rowBar.ZIndex           = 4
-        rowBar.Parent           = row
-        Instance.new("UICorner", rowBar).CornerRadius = UDim.new(0, 2)
-
-        local icon = Instance.new("TextLabel")
-        icon.Text                 = chk.passed and "✓" or "✗"
-        icon.Font                 = Enum.Font.GothamBold
-        icon.TextSize             = 11
-        icon.TextColor3           = chk.passed and C.Success or C.Fail
-        icon.BackgroundTransparency = 1
-        icon.Size                 = UDim2.new(0, 20, 1, 0)
-        icon.Position             = UDim2.new(0, 4, 0, 0)
-        icon.TextXAlignment       = Enum.TextXAlignment.Center
-        icon.ZIndex               = 4
-        icon.Parent               = row
-
-        local lbel = Instance.new("TextLabel")
-        lbel.Text                 = chk.label
-        lbel.Font                 = Enum.Font.Gotham
-        lbel.TextSize             = 10
-        lbel.TextColor3           = C.Ghost
-        lbel.BackgroundTransparency = 1
-        lbel.Size                 = UDim2.new(1, -28, 1, 0)
-        lbel.Position             = UDim2.new(0, 26, 0, 0)
-        lbel.TextXAlignment       = Enum.TextXAlignment.Left
-        lbel.ZIndex               = 4
-        lbel.Parent               = row
+    for _,c in ipairs(checkList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    for i,chk in ipairs(checks) do
+        local row=Instance.new("Frame") row.Size=UDim2.new(1,0,0,22) row.BackgroundColor3=C.Card
+        row.BorderSizePixel=0 row.LayoutOrder=i row.ZIndex=3 row.Parent=checkList
+        Instance.new("UICorner",row).CornerRadius=UDim.new(0,5)
+        local rb=Instance.new("Frame") rb.Size=UDim2.new(0,2,0.65,0) rb.Position=UDim2.new(0,0,0.175,0)
+        rb.BackgroundColor3=chk.passed and C.Success or C.Fail rb.BorderSizePixel=0 rb.ZIndex=4 rb.Parent=row
+        Instance.new("UICorner",rb).CornerRadius=UDim.new(0,2)
+        local ic=Instance.new("TextLabel") ic.Text=chk.passed and "✓" or "✗" ic.Font=Enum.Font.GothamBold
+        ic.TextSize=11 ic.TextColor3=chk.passed and C.Success or C.Fail ic.BackgroundTransparency=1
+        ic.Size=UDim2.new(0,22,1,0) ic.Position=UDim2.new(0,4,0,0) ic.TextXAlignment=Enum.TextXAlignment.Center
+        ic.ZIndex=4 ic.Parent=row
+        local lb=Instance.new("TextLabel") lb.Text=chk.label lb.Font=Enum.Font.Gotham lb.TextSize=10
+        lb.TextColor3=C.Ghost lb.BackgroundTransparency=1 lb.Size=UDim2.new(1,-28,1,0)
+        lb.Position=UDim2.new(0,26,0,0) lb.TextXAlignment=Enum.TextXAlignment.Left lb.ZIndex=4 lb.Parent=row
     end
 end
 
 renderChecks(buildChecks())
 
-local copyGroupBtn = makeBtn(systemPage, "🔗  Copy Group Link  (join to unlock)", 198, false)
-local copyInfoBtn  = makeBtn(systemPage, "📋  Copy Support Info", 232, false)
-local copyLinkBtn  = makeBtn(systemPage, "🔗  Copy Backup Link", 266, false)
+local cGrp=accentBtn(IP,"🔗  Copy Group Link",200,28,false)
+local cInf=accentBtn(IP,"📋  Copy Support Info",234,28,false)
+local cLnk=accentBtn(IP,"🔗  Copy Backup Link",268,28,false)
+local cRechk=accentBtn(IP,"↺  Refresh checks",302,28,false)
 
-copyGroupBtn.MouseButton1Click:Connect(function()
+cGrp.MouseButton1Click:Connect(function()
     copyToClipboard(HUB.GROUP_URL)
-    copyGroupBtn.Text = "✓  Copied — paste in browser"
-    task.delay(2, function() copyGroupBtn.Text = "🔗  Copy Group Link  (join to unlock)" end)
+    cGrp.Text="✓  Copied!" task.delay(2,function() cGrp.Text="🔗  Copy Group Link" end)
 end)
-
-copyInfoBtn.MouseButton1Click:Connect(function()
-    local info = ("VOID HUB %s | %s | Executor: %s | Age: %d days | Game: %d")
-        :format(HUB.Version, LocalPlayer.Name, detectExecutor(), getAccountAge(), game.PlaceId)
-    copyToClipboard(info)
-    copyInfoBtn.Text = "✓  Copied!"
-    task.delay(1.5, function() copyInfoBtn.Text = "📋  Copy Support Info" end)
+cInf.MouseButton1Click:Connect(function()
+    copyToClipboard(string.format("VOID HUB %s | %s | Executor: %s | Age: %d | Game: %d",
+        HUB.Version,LocalPlayer.Name,getExec(),getAge(),game.PlaceId))
+    cInf.Text="✓  Copied!" task.delay(1.5,function() cInf.Text="📋  Copy Support Info" end)
 end)
-
-copyLinkBtn.MouseButton1Click:Connect(function()
+cLnk.MouseButton1Click:Connect(function()
     copyToClipboard(HUB.BackupURL)
-    copyLinkBtn.Text = "✓  Copied!"
-    task.delay(1.5, function() copyLinkBtn.Text = "🔗  Copy Backup Link" end)
+    cLnk.Text="✓  Copied!" task.delay(1.5,function() cLnk.Text="🔗  Copy Backup Link" end)
+end)
+cRechk.MouseButton1Click:Connect(function()
+    cRechk.Text="Refreshing..."
+    task.spawn(function() renderChecks(buildChecks()) cRechk.Text="↺  Refresh checks" end)
 end)
 
--- ============================================================
---  TAB SWITCH
--- ============================================================
-
-local function switchTab(name)
-    activeTab = name
-    for tName, page in pairs(tabPages) do page.Visible = (tName==name) end
-    for tName, btn in pairs(tabBtns) do
-        local active = (tName==name)
-        btn.TextColor3       = active and C.White or C.Ghost
-        btn.BackgroundColor3 = active and C.Electric or C.NavyMid
-    end
+-- ── Tab wiring ────────────────────────────────────────────────
+for _,td in ipairs(tabDefs) do
+    tabBtns[td.name].MouseButton1Click:Connect(function() switchTab(td.name) end)
 end
+switchTab("Access")
 
-for name, btn in pairs(tabBtns) do
-    btn.MouseButton1Click:Connect(function() switchTab(name) end)
-end
+-- ── Fade in ───────────────────────────────────────────────────
+Root.BackgroundTransparency=1
+TweenService:Create(Root,TweenInfo.new(0.35,Enum.EasingStyle.Quad),{BackgroundTransparency=0}):Play()
 
-switchTab("System")
-
--- ============================================================
---  FADE IN
--- ============================================================
-
-Root.BackgroundTransparency = 1
-TweenService:Create(Root, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
-    BackgroundTransparency = 0
-}):Play()
-
--- ============================================================
---  KEYBIND
--- ============================================================
-
-UserInputService.InputBegan:Connect(function(input, gp)
+-- ── Keybind ───────────────────────────────────────────────────
+UserInputService.InputBegan:Connect(function(i,gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        Root.Visible = not Root.Visible
-    end
+    if i.KeyCode==Enum.KeyCode.RightShift then Root.Visible=not Root.Visible end
 end)
 
--- ============================================================
---  LOADER
--- ============================================================
-
+-- ── Loader ────────────────────────────────────────────────────
 local function loadMain()
-    if HUB.SCRIPT_URL == "" then return end
-    if not httpRequest then warn("[VOID HUB] No HTTP function.") return end
-    local ok, res = pcall(httpRequest, { Url=HUB.SCRIPT_URL, Method="GET" })
+    if HUB.SCRIPT_URL=="" then return end
+    if not httpRequest then warn("[VOID HUB] No HTTP.") return end
+    local ok,res=pcall(httpRequest,{Url=HUB.SCRIPT_URL,Method="GET"})
     if ok and res and res.StatusCode==200 then
-        local fn, err = _loadstring(res.Body)
-        if fn then pcall(fn) else warn("[VOID HUB] loadstring: "..tostring(err)) end
-    else
-        warn("[VOID HUB] Fetch failed: "..tostring(ok and res and res.StatusCode or "N/A"))
+        local fn,err=_loadstring(res.Body)
+        if fn then pcall(fn) else warn("[VOID HUB] "..tostring(err)) end
     end
 end
-
 task.spawn(loadMain)
 print("[VOID HUB] Loaded — "..HUB.Version)
