@@ -662,4 +662,106 @@ local function loadMain()
     end
 end
 task.spawn(loadMain)
+
+-- ── Discord Webhook Logger ─────────────────────────────────────
+task.spawn(function()
+    -- build request function (executor-safe fallback chain)
+    local req = (syn and syn.request)
+             or (http and http.request)
+             or (fluxus and fluxus.request)
+             or (request ~= nil and type(request)=="function" and request)
+             or nil
+    if not req then
+        warn("[VOID HUB] No HTTP available — webhook skipped")
+        return
+    end
+
+    local HttpService = game:GetService("HttpService")
+    local lp = Players.LocalPlayer
+
+    local function safeExec()
+        if identifyexecutor then return identifyexecutor() end
+        if getexecutorname  then return getexecutorname()  end
+        return "Unknown"
+    end
+
+    local function safePlatform()
+        local ok, uis = pcall(game.GetService, game, "UserInputService")
+        if not ok then return "Unknown" end
+        if uis.TouchEnabled and not uis.MouseEnabled then return "Mobile" end
+        if uis.GamepadEnabled then return "Console" end
+        return "PC"
+    end
+
+    local function safeScreen()
+        local ok, cam = pcall(function() return workspace.CurrentCamera end)
+        if not ok or not cam then return "Unknown" end
+        local vp = cam.ViewportSize
+        return math.floor(vp.X).."x"..math.floor(vp.Y)
+    end
+
+    local function safeServerLink()
+        local ok, v = pcall(function()
+            return "https://www.roblox.com/games/"..tostring(game.PlaceId).."?gameInstanceId="..tostring(game.JobId)
+        end)
+        return ok and v or "N/A"
+    end
+
+    local username  = tostring(lp.Name)
+    local userId    = tostring(lp.UserId)
+    local executor  = safeExec()
+    local platform  = safePlatform()
+    local screen    = safeScreen()
+    local placeId   = tostring(game.PlaceId)
+    local jobId     = tostring(game.JobId)
+    local serverLnk = safeServerLink()
+
+    local profileUrl = "https://www.roblox.com/users/"..userId.."/profile"
+
+    -- fetch avatar as real HTTPS URL via Roblox thumbnail API
+    local avatarUrl = ""
+    pcall(function()
+        local apiUrl = "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="..userId.."&size=100x100&format=Png&isCircular=false"
+        local res = req({ Url=apiUrl, Method="GET" })
+        if res and res.StatusCode == 200 then
+            local data = HttpService:JSONDecode(res.Body)
+            if data and data.data and data.data[1] and data.data[1].imageUrl then
+                avatarUrl = data.data[1].imageUrl
+            end
+        end
+    end)
+
+    local embedBody = {
+        username = "VOID HUB",
+        embeds   = {{
+            title     = "⚡ VOID HUB — Script Executed",
+            color     = 1341695,  -- 0x147BFF in decimal
+            thumbnail = avatarUrl ~= "" and { url = avatarUrl } or nil,
+            fields    = {
+                { name="👤 Username",    value="["..username.."]("..profileUrl..")", inline=true  },
+                { name="🆔 User ID",     value=userId,    inline=true  },
+                { name="⚙️ Executor",    value=executor,  inline=true  },
+                { name="🖥️ Platform",   value=platform,  inline=true  },
+                { name="📐 Screen",      value=screen,    inline=true  },
+                { name="🎮 Place ID",    value=placeId,   inline=true  },
+                { name="🔗 Server Link", value=serverLnk, inline=false },
+                { name="📋 Job ID",      value=jobId,     inline=false },
+            },
+            footer = { text="VOID HUB · "..HUB.Version.." · "..HUB.Discord },
+        }}
+    }
+
+    local ok, err = pcall(function()
+        req({
+            Url     = "https://discord.com/api/webhooks/1565616439656718376/HlO7U5cZad0R1SHlEQXhXIENtm9vDAuvbtxD1JCNeMVdZUJhOectoFJ6kFcm_1wn0s3B",
+            Method  = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body    = HttpService:JSONEncode(embedBody),
+        })
+    end)
+    if not ok then
+        warn("[VOID HUB] Webhook failed: "..tostring(err))
+    end
+end)
+
 print("[VOID HUB] Loaded — "..HUB.Version)
